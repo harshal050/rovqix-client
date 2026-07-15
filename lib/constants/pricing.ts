@@ -1,0 +1,47 @@
+export const pricingPlans = [
+  {
+    name: "Starter",
+    description: "For founders who need a sharp, credible presence fast.",
+    price: "₹24,999",
+    period: "one-time",
+    featured: false,
+    features: [
+      "Up to 5 pages",
+      "Custom responsive design",
+      "Basic on-page SEO",
+      "Contact & lead forms",
+      "2 weeks delivery",
+      "30 days of support",
+    ],
+  },
+  {
+    name: "Growth",
+    description: "For businesses ready to scale their digital presence.",
+    price: "₹59,999",
+    period: "one-time",
+    featured: true,
+    features: [
+      "Up to 12 pages",
+      "Advanced animations & motion",
+      "CMS-ready architecture",
+      "Technical + on-page SEO",
+      "Performance optimization",
+      "90 days of priority support",
+    ],
+  },
+  {
+    name: "Enterprise",
+    description: "For SaaS, AI, and platform products with complex needs.",
+    price: "Custom",
+    period: "quote",
+    featured: false,
+    features: [
+      "Unlimited pages & components",
+      "Web app / dashboard build",
+      "Design system & documentation",
+      "Dedicated engineering pod",
+      "SLA-backed maintenance",
+      "White-glove onboarding",
+    ],
+  },
+] as const;

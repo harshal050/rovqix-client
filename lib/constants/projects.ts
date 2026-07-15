@@ -1,0 +1,148 @@
+export const featuredProjects = [
+  {
+    slug: "nimbus-health",
+    name: "Nimbus Health",
+    category: "SaaS Platform",
+    description: "A calm, clinical-grade product site for a telehealth platform.",
+    summary:
+      "Nimbus Health needed a product site that felt as trustworthy as the clinicians using it. We rebuilt their entire web presence around clarity — reducing sign-up friction while making a complex care platform feel effortless to understand.",
+    gradient: "from-[#3a3a3a] to-[#0a0a0a]",
+    tags: ["SaaS", "Healthcare", "Web App"],
+    client: "Nimbus Health",
+    year: "2024",
+    services: ["Product Design", "Web Development", "Design System"],
+    results: [
+      { label: "Sign-up conversion", value: "+38%" },
+      { label: "Time to launch", value: "3 weeks" },
+      { label: "Lighthouse score", value: "98" },
+    ],
+  },
+  {
+    slug: "fieldstack",
+    name: "Fieldstack",
+    category: "Startup Website",
+    description: "Investor-ready storytelling for a logistics infrastructure startup.",
+    summary:
+      "Ahead of their Series A, Fieldstack needed a site that could carry the weight of a technical pitch without losing the human story. We built a narrative-led site that doubled as a fundraising asset.",
+    gradient: "from-[#454545] to-[#111111]",
+    tags: ["Startup", "B2B", "Landing"],
+    client: "Fieldstack",
+    year: "2024",
+    services: ["Brand Website", "Copywriting", "Motion Design"],
+    results: [
+      { label: "Demo requests", value: "+64%" },
+      { label: "Avg. session time", value: "3m 40s" },
+      { label: "Time to launch", value: "2 weeks" },
+    ],
+  },
+  {
+    slug: "portside-ai",
+    name: "Portside AI",
+    category: "AI Product",
+    description: "A conversational-AI showcase built to make complexity feel effortless.",
+    summary:
+      "Portside AI's product was genuinely hard to explain. We designed an interface-first marketing site that let visitors experience the product's conversational logic before ever signing up.",
+    gradient: "from-[#2e2e2e] to-[#050505]",
+    tags: ["AI", "Conversational", "Dashboard"],
+    client: "Portside AI",
+    year: "2025",
+    services: ["AI Interface Design", "Web Development", "Interactive Prototyping"],
+    results: [
+      { label: "Trial activation", value: "+41%" },
+      { label: "Bounce rate", value: "-27%" },
+      { label: "Lighthouse score", value: "96" },
+    ],
+  },
+  {
+    slug: "lumen-labs",
+    name: "Lumen Labs",
+    category: "Portfolio",
+    description: "A gallery-grade portfolio for a generative design studio.",
+    summary:
+      "Lumen Labs wanted their portfolio to feel like a gallery show, not a grid of thumbnails. We built an immersive, motion-first case study system that lets each project breathe.",
+    gradient: "from-[#4d4d4d] to-[#161616]",
+    tags: ["Portfolio", "Creative", "Motion"],
+    client: "Lumen Labs",
+    year: "2023",
+    services: ["Portfolio Design", "Motion Design", "Web Development"],
+    results: [
+      { label: "New inquiries", value: "+52%" },
+      { label: "Avg. session time", value: "4m 10s" },
+      { label: "Time to launch", value: "10 days" },
+    ],
+  },
+  {
+    slug: "northlane",
+    name: "Northlane",
+    category: "Ecommerce",
+    description: "A buttery-smooth storefront built to convert on every scroll depth.",
+    summary:
+      "Northlane's existing store was slow and generic. We rebuilt the storefront from the ground up — instant page loads, cinematic product reveals, and a checkout flow that gets out of the way.",
+    gradient: "from-[#383838] to-[#0d0d0d]",
+    tags: ["Ecommerce", "Retail", "Storefront"],
+    client: "Northlane",
+    year: "2024",
+    services: ["Ecommerce Design", "Web Development", "Performance Optimization"],
+    results: [
+      { label: "Conversion rate", value: "+38%" },
+      { label: "Page load time", value: "0.9s" },
+      { label: "Cart abandonment", value: "-19%" },
+    ],
+  },
+  {
+    slug: "vantage-systems",
+    name: "Vantage Systems",
+    category: "Enterprise",
+    description: "A robust enterprise site with complex content and compliance needs.",
+    summary:
+      "Vantage Systems needed a site that could serve enterprise buyers, compliance reviewers, and investors simultaneously — without turning into a maze. We designed a scalable content architecture that holds up under real complexity.",
+    gradient: "from-[#404040] to-[#0a0a0a]",
+    tags: ["Enterprise", "Corporate", "Scale"],
+    client: "Vantage Systems",
+    year: "2025",
+    services: ["Enterprise Web Platform", "Design System", "Content Architecture"],
+    results: [
+      { label: "Sales-qualified leads", value: "+29%" },
+      { label: "Pages migrated", value: "180+" },
+      { label: "Lighthouse score", value: "97" },
+    ],
+  },
+  {
+    slug: "orbital-finance",
+    name: "Orbital Finance",
+    category: "SaaS Platform",
+    description: "A data-dense dashboard made approachable for everyday operators.",
+    summary:
+      "Orbital's finance dashboard was powerful but intimidating. We redesigned the information hierarchy and interaction patterns so operators could act on data in seconds, not minutes.",
+    gradient: "from-[#2a2a2a] to-[#000000]",
+    tags: ["SaaS", "Dashboard", "Fintech"],
+    client: "Orbital Finance",
+    year: "2025",
+    services: ["Dashboard Design", "Web Application", "Design System"],
+    results: [
+      { label: "Task completion time", value: "-44%" },
+      { label: "Weekly active users", value: "+31%" },
+      { label: "Support tickets", value: "-22%" },
+    ],
+  },
+  {
+    slug: "kestrel-goods",
+    name: "Kestrel Goods",
+    category: "Landing Page",
+    description: "A high-velocity launch page built for a single, focused campaign.",
+    summary:
+      "Kestrel needed a launch page live within days for a limited product drop. We shipped a focused, single-goal page engineered purely for conversion.",
+    gradient: "from-[#525252] to-[#1a1a1a]",
+    tags: ["Landing", "DTC", "Campaign"],
+    client: "Kestrel Goods",
+    year: "2024",
+    services: ["Landing Page Design", "Web Development"],
+    results: [
+      { label: "Conversion rate", value: "+22%" },
+      { label: "Time to launch", value: "4 days" },
+      { label: "Lighthouse score", value: "99" },
+    ],
+  },
+] as const;
+
+export type FeaturedProject = (typeof featuredProjects)[number];
