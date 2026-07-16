@@ -17,9 +17,9 @@ That app is its own independent repo with its own database and its own deploymen
 1. Stand up `../rovqix-admin` (see its README) and seed it.
 2. Copy `.env.example` to `.env.local` here and set:
    ```
-   NEXT_PUBLIC_ADMIN_API_URL=http://localhost:3000
+   NEXT_PUBLIC_ADMIN_API_URL=http://localhost:3010
    ```
-   (or wherever the admin is running/deployed)
+   (the admin's `dev`/`start` scripts are pinned to port 3010 for exactly this reason — or set this to wherever the admin is deployed in production)
 3. `npm run dev` — content now comes from the admin, and editing it there reflects here within about a minute (cached with a 60s revalidation window).
 
 ### Running without the admin
