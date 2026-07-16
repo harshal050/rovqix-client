@@ -4,8 +4,9 @@ import { useState, type FormEvent } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getAdminApiUrl } from "@/lib/api/client";
 
-const ADMIN_API_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL;
+const ADMIN_API_URL = getAdminApiUrl();
 
 export function NewsletterForm() {
   const [email, setEmail] = useState("");

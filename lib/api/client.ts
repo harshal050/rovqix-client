@@ -1,4 +1,17 @@
-const ADMIN_API_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL;
+const RAW_ADMIN_API_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL;
+
+/**
+ * Upgrades http:// to https:// for anything but localhost. The browser
+ * silently blocks fetches from this (https) site to a plain-http admin URL
+ * as mixed content, which looks exactly like a network failure — this
+ * guards against that misconfiguration regardless of what's set in env.
+ */
+function normalizeAdminUrl(url: string): string {
+  if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(url)) return url;
+  return url.replace(/^http:\/\//, "https://");
+}
+
+const ADMIN_API_URL = RAW_ADMIN_API_URL ? normalizeAdminUrl(RAW_ADMIN_API_URL) : undefined;
 
 export function getAdminApiUrl() {
   return ADMIN_API_URL;

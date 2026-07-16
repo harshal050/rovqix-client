@@ -7,12 +7,13 @@ import { CheckCircle2, Loader2, SendIcon } from "lucide-react";
 
 import { contactFormSchema, type ContactFormValues } from "@/lib/schemas/contact";
 import { siteConfig } from "@/lib/constants/site";
+import { getAdminApiUrl } from "@/lib/api/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const ADMIN_API_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL;
+const ADMIN_API_URL = getAdminApiUrl();
 
 const fields: {
   name: keyof ContactFormValues;

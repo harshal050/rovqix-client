@@ -8,12 +8,13 @@ import { CheckCircle2, Loader2, SendIcon, Paperclip } from "lucide-react";
 import { careerApplySchema, type CareerApplyValues } from "@/lib/schemas/careers";
 import type { CareerItem } from "@/lib/api/careers";
 import { siteConfig } from "@/lib/constants/site";
+import { getAdminApiUrl } from "@/lib/api/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const ADMIN_API_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL;
+const ADMIN_API_URL = getAdminApiUrl();
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
