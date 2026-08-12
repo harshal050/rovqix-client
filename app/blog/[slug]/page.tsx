@@ -4,17 +4,35 @@ import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 
 import { getBlogPosts, getBlogPostBySlug } from "@/lib/api/blog";
+import { getArticleBySlug, getArticleSlugs } from "@/lib/content/articles";
+import { ArticleLayout } from "@/components/sections/blog/article/article-layout";
 import { AuroraBackground } from "@/components/shared/aurora-background";
 import { Reveal } from "@/components/shared/reveal";
 import { Badge } from "@/components/ui/badge";
 import { BlogCard } from "@/components/sections/blog/blog-card";
 import { NewsletterBanner } from "@/components/sections/blog/newsletter-banner";
 import { JsonLd } from "@/components/shared/json-ld";
-import { blogPostingJsonLd, breadcrumbJsonLd, keywordsFromText, withBaseKeywords } from "@/lib/seo";
+import { Breadcrumbs } from "@/components/sections/blog/article/breadcrumbs";
+import { formatArticleDate } from "@/lib/content/format";
+import {
+  absoluteUrl,
+  articleMetadata,
+  blogPostingJsonLd,
+  breadcrumbJsonLd,
+  keywordsFromText,
+  withBaseKeywords,
+} from "@/lib/seo";
 
+/**
+ * One route serves two sources: the static article library
+ * (lib/content/articles) and any posts coming from the admin API. Static
+ * articles render through the full SEO template; API posts keep the simpler
+ * layout they were written for.
+ */
 export async function generateStaticParams() {
   const posts = await getBlogPosts();
-  return posts.map((post) => ({ slug: post.slug }));
+  const slugs = new Set([...getArticleSlugs(), ...posts.map((post) => post.slug)]);
+  return Array.from(slugs).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
@@ -23,35 +41,42 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+
+  const article = getArticleBySlug(slug);
+  if (article) return articleMetadata(article);
+
   const post = await getBlogPostBySlug(slug);
   if (!post) return {};
+
   const keywords = withBaseKeywords(
     post.category,
     ...keywordsFromText(post.title),
     ...keywordsFromText(post.excerpt, 12)
   );
+  const url = absoluteUrl(`/blog/${post.slug}`);
+
   return {
     title: post.title,
     description: post.excerpt,
     keywords,
     authors: [{ name: "ROVQIX" }],
+    alternates: { canonical: url },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
+    },
     openGraph: {
       title: post.title,
       description: post.excerpt,
+      url,
       type: "article",
       publishedTime: post.date,
       section: post.category,
       tags: keywords,
     },
+    twitter: { card: "summary_large_image", title: post.title, description: post.excerpt },
   };
-}
-
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 export default async function BlogPostPage({
@@ -60,27 +85,33 @@ export default async function BlogPostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+
+  const article = getArticleBySlug(slug);
+  if (article) return <ArticleLayout article={article} />;
+
   const post = await getBlogPostBySlug(slug);
   if (!post) notFound();
 
   const allPosts = await getBlogPosts();
   const related = allPosts.filter((p) => p.slug !== post.slug).slice(0, 3);
+  const breadcrumbs = [
+    { name: "Home", path: "/" },
+    { name: "Blog", path: "/blog" },
+    { name: post.title, path: `/blog/${post.slug}` },
+  ];
 
   return (
     <>
       <JsonLd data={blogPostingJsonLd(post)} />
-      <JsonLd
-        data={breadcrumbJsonLd([
-          { name: "Home", path: "/" },
-          { name: "Blog", path: "/blog" },
-          { name: post.title, path: `/blog/${post.slug}` },
-        ])}
-      />
+      <JsonLd data={breadcrumbJsonLd(breadcrumbs)} />
       <article className="relative overflow-hidden px-6 pt-40 pb-16 sm:px-8 sm:pt-48">
         <AuroraBackground />
         <div className="bg-grid bg-radial-fade pointer-events-none absolute inset-0 -z-10 opacity-50" />
         <div className="mx-auto max-w-3xl">
           <Reveal>
+            <Breadcrumbs items={breadcrumbs} />
+          </Reveal>
+          <Reveal delay={0.04} className="mt-6">
             <Link
               href="/blog"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -94,7 +125,7 @@ export default async function BlogPostPage({
               {post.category}
             </Badge>
             <span className="text-sm text-muted-foreground">
-              {formatDate(post.date)} · {post.readTime}
+              <time dateTime={post.date}>{formatArticleDate(post.date)}</time> · {post.readTime}
             </span>
           </Reveal>
           <Reveal delay={0.14}>

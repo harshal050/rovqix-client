@@ -1,18 +1,33 @@
 import { ImageResponse } from "next/og";
 import { getBlogPostBySlug } from "@/lib/api/blog";
+import { getArticleBySlug } from "@/lib/content/articles";
+import { getCluster } from "@/lib/content/clusters";
 import { siteConfig } from "@/lib/constants/site";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export async function generateImageMetadata({ params }: { params: { slug: string } }) {
-  const post = await getBlogPostBySlug(params.slug);
-  return [{ id: "default", alt: post?.title ?? siteConfig.name, size, contentType }];
+async function resolve(slug: string) {
+  const article = getArticleBySlug(slug);
+  if (article) {
+    return { title: article.title, eyebrow: getCluster(article.cluster).name };
+  }
+  const post = await getBlogPostBySlug(slug);
+  if (post) return { title: post.title, eyebrow: post.category };
+  return { title: siteConfig.name, eyebrow: "ROVQIX Blog" };
 }
+
+/**
+ * No generateImageMetadata here on purpose: it would add an id segment to the
+ * route, and the URL is referenced directly by articleImageUrl() for both the
+ * social card and the article's featured image. Alt text is supplied through
+ * the page's openGraph.images metadata instead.
+ */
+export const alt = `${siteConfig.name} article cover`;
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const post = await getBlogPostBySlug(slug);
+  const { title, eyebrow } = await resolve(slug);
 
   return new ImageResponse(
     (
@@ -30,19 +45,19 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         }}
       >
         <div style={{ display: "flex", fontSize: 30, fontWeight: 600, color: "#3B82F6" }}>
-          {post?.category ?? "ROVQIX Blog"}
+          {eyebrow}
         </div>
         <div
           style={{
             display: "flex",
-            fontSize: 64,
+            fontSize: title.length > 70 ? 52 : 64,
             fontWeight: 700,
             lineHeight: 1.15,
             color: "#ffffff",
             maxWidth: 980,
           }}
         >
-          {post?.title ?? siteConfig.name}
+          {title}
         </div>
         <div style={{ display: "flex", fontSize: 28, color: "rgba(255,255,255,0.6)" }}>
           {siteConfig.name} — {siteConfig.tagline}
