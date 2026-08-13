@@ -102,6 +102,15 @@ export const clusters: Cluster[] = [
       "Guides on optimising for AI search: answer engine optimisation, generative engine optimisation, citations in AI Overviews and LLM crawlers.",
     service: { label: "SEO services", href: "/services#seo" },
   },
+  {
+    id: "small-business",
+    slug: "small-business",
+    name: "Small business",
+    title: "Small business website guides: plain-English answers",
+    description:
+      "Practical guides for shop owners, trades and local businesses — what a website costs, why you are not on Google, hosting, reviews, photos and choosing who to hire.",
+    service: { label: "Local business websites", href: "/local" },
+  },
 ];
 
 const clusterById = new Map(clusters.map((cluster) => [cluster.id, cluster]));

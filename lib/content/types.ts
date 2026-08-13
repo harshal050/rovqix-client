@@ -16,7 +16,9 @@ export type ClusterId =
   | "performance"
   | "security"
   | "seo"
-  | "ai-seo";
+  | "ai-seo"
+  /** Small business owner audience, not developers. */
+  | "small-business";
 
 export type Block =
   | { type: "p"; text: string }
