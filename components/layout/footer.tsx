@@ -37,7 +37,7 @@ export async function Footer() {
           </div>
         </Reveal>
 
-        <div className="grid grid-cols-2 gap-10 py-16 sm:grid-cols-2 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-10 py-16 sm:grid-cols-2 md:grid-cols-6">
           <div className="col-span-2">
             <Link href="/" className="inline-flex items-center">
               <Image
@@ -89,6 +89,7 @@ export async function Footer() {
 
           <FooterColumn title="Company" links={footerLinks.company} />
           <FooterColumn title="Services" links={footerLinks.services} />
+          <FooterColumn title="Hire Us" links={footerLinks.hire} />
           <FooterColumn title="Resources" links={footerLinks.resources} />
         </div>
 

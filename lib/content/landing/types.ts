@@ -2,8 +2,16 @@ import type { ArticleFaq, ArticleSection, Block } from "@/lib/content/types";
 
 export type { Block, ArticleSection, ArticleFaq };
 
-/** The four page families. Each maps to a route segment and a hub page. */
-export type LandingGroup = "services" | "hire" | "locations" | "industries";
+/** The page families. Each maps to a route segment and a hub page. */
+export type LandingGroup =
+  | "services"
+  | "hire"
+  | "locations"
+  | "industries"
+  | "cost"
+  | "compare"
+  /** Small local businesses. Template-based starter work, not custom builds. */
+  | "local";
 
 export type Deliverable = {
   title: string;

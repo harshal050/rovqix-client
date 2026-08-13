@@ -2,15 +2,33 @@ import type { LandingGroup, LandingPage } from "@/lib/content/landing/types";
 import { getGroup } from "@/lib/content/landing/groups";
 
 import { servicePages } from "@/lib/content/landing/services";
+import { servicePagesExtra } from "@/lib/content/landing/services-extra";
 import { hirePages } from "@/lib/content/landing/hire";
+import { hirePagesExtra } from "@/lib/content/landing/hire-extra";
 import { locationPages } from "@/lib/content/landing/locations";
+import { locationPagesExtra } from "@/lib/content/landing/locations-extra";
 import { industryPages } from "@/lib/content/landing/industries";
+import { industryPagesExtra } from "@/lib/content/landing/industries-extra";
+import { costPages } from "@/lib/content/landing/cost";
+import { comparePages } from "@/lib/content/landing/compare";
+import { locationPagesUs } from "@/lib/content/landing/locations-us";
+import { industryPagesUs } from "@/lib/content/landing/industries-us";
+import { servicePagesUs } from "@/lib/content/landing/services-us";
 
 export const landingPages: LandingPage[] = [
   ...servicePages,
+  ...servicePagesExtra,
   ...hirePages,
+  ...hirePagesExtra,
   ...locationPages,
+  ...locationPagesExtra,
   ...industryPages,
+  ...industryPagesExtra,
+  ...costPages,
+  ...comparePages,
+  ...locationPagesUs,
+  ...industryPagesUs,
+  ...servicePagesUs,
 ];
 
 const bySlug = new Map(landingPages.map((page) => [page.slug, page]));

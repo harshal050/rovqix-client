@@ -40,6 +40,33 @@ export const landingGroups: GroupConfig[] = [
       "ROVQIX works with companies across the United States, United Kingdom, Canada, Australia and the UAE — remote-first, with overlapping hours and contracts in your currency.",
   },
   {
+    id: "local",
+    segment: "local",
+    name: "Local business websites",
+    hubTitle: "Local business websites",
+    hubHeading: "A proper website for your shop, from $349.",
+    hubDescription:
+      "Starter websites for barbers, salons, restaurants, trades and local shops — built on a proven template, live in about a week, and yours to keep. Not a custom build, and priced accordingly.",
+  },
+  {
+    id: "cost",
+    segment: "cost",
+    name: "Costs",
+    hubTitle: "What things cost",
+    hubHeading: "Real numbers, before you get on a call.",
+    hubDescription:
+      "What a website, ecommerce store, SaaS platform or custom application actually costs to build in 2026 — with the variables that move the number and where budgets get wasted.",
+  },
+  {
+    id: "compare",
+    segment: "compare",
+    name: "Comparisons",
+    hubTitle: "Comparisons",
+    hubHeading: "The decisions worth getting right first.",
+    hubDescription:
+      "Agency or freelancer, in-house or outsourced, WordPress or custom, fixed price or hourly — honest comparisons including the cases where our answer is not to hire us.",
+  },
+  {
     id: "industries",
     segment: "industries",
     name: "Industries",

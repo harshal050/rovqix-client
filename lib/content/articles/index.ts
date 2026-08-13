@@ -10,6 +10,7 @@ import { performanceArticles } from "@/lib/content/articles/performance";
 import { securityArticles } from "@/lib/content/articles/security";
 import { seoArticles } from "@/lib/content/articles/seo";
 import { aiSeoArticles } from "@/lib/content/articles/ai-seo";
+import { practiceArticles } from "@/lib/content/articles/practice";
 
 /** Every static article, newest first. */
 export const articles: Article[] = [
@@ -23,6 +24,7 @@ export const articles: Article[] = [
   ...securityArticles,
   ...seoArticles,
   ...aiSeoArticles,
+  ...practiceArticles,
 ].sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
 
 const bySlug = new Map(articles.map((article) => [article.slug, article]));

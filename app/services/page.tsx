@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PageHero } from "@/components/shared/page-hero";
 import { ServiceDetailList } from "@/components/sections/services/service-detail-list";
+import { ServiceLandingLinks } from "@/components/sections/landing/service-landing-links";
 import { Process } from "@/components/sections/home/process";
 import { PricingPreview } from "@/components/sections/home/pricing-preview";
 import { Faq } from "@/components/sections/home/faq";
@@ -31,6 +32,7 @@ export default async function ServicesPage() {
         description="Whatever stage your business is at, we scope the exact engagement it needs — not a one-size-fits-all package."
       />
       <ServiceDetailList />
+      <ServiceLandingLinks />
       <Process />
       <PricingPreview />
       <Faq />
