@@ -1,19 +1,33 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import type { LandingGroup } from "@/lib/content/landing/types";
+import type { LandingGroup, LandingPage } from "@/lib/content/landing/types";
 import { getLandingPage, getLandingPagesByGroup } from "@/lib/content/landing";
 import { LandingLayout } from "@/components/sections/landing/landing-layout";
 import { landingMetadata } from "@/lib/seo";
 
 type Params = { params: Promise<{ slug: string }> };
 
+type RouteOptions = {
+  /**
+   * Which pages to prerender at build time. Everything else in the group still
+   * works — it renders on first request and is then cached (dynamicParams is
+   * left at its default of true).
+   *
+   * Use this for very large groups. Prerendering every page writes ~470KB of
+   * html + rsc + meta per page to the build output, which exhausts the disk on
+   * a Vercel build container somewhere north of ~25,000 pages.
+   *
+   * Omit it to prerender the whole group, which is right for small groups.
+   */
+  prerender?: (pages: LandingPage[]) => LandingPage[];
+};
+
 /**
  * Every landing group's [slug] route is identical apart from the group it
  * scopes to, so the route files just spread the result of this factory.
- * Keeps 4 route segments (and any future ones) on one implementation.
  */
-export function createLandingRoute(group: LandingGroup) {
+export function createLandingRoute(group: LandingGroup, options: RouteOptions = {}) {
   async function resolve(params: Params["params"]) {
     const { slug } = await params;
     const page = getLandingPage(slug);
@@ -24,8 +38,11 @@ export function createLandingRoute(group: LandingGroup) {
   }
 
   return {
-    generateStaticParams: async () =>
-      getLandingPagesByGroup(group).map((page) => ({ slug: page.slug })),
+    generateStaticParams: async () => {
+      const pages = getLandingPagesByGroup(group);
+      const selected = options.prerender ? options.prerender(pages) : pages;
+      return selected.map((page) => ({ slug: page.slug }));
+    },
 
     generateMetadata: async ({ params }: Params): Promise<Metadata> => {
       const page = await resolve(params);

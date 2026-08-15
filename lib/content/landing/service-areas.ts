@@ -1,6 +1,7 @@
 import type { ArticleSection, LandingPage } from "@/lib/content/landing/types";
 import { cities, climateNotes, tierNotes, type City } from "@/lib/content/landing/cities";
 import { extendedCities } from "@/lib/content/landing/cities-extended";
+import { internationalCities } from "@/lib/content/landing/cities-international";
 import { serviceTypes, type ServiceType } from "@/lib/content/landing/service-area-types";
 import { starterPricing, starterProof } from "@/lib/content/landing/local-shared";
 
@@ -262,8 +263,8 @@ function buildPage(service: ServiceType, city: City): LandingPage {
       {
         question: `Do you work with ${service.owners} outside ${city.name}?`,
         answer: city.areas?.length
-          ? `Yes — we work remotely with businesses across the ${city.state} metro area including ${city.areas.slice(0, 3).join(", ")}, and across the US generally. Everything is done over email, phone and a preview link.`
-          : `Yes — we work remotely with businesses across ${city.state} and the US generally. Everything is done over email, phone and a preview link, so location is not a constraint.`,
+          ? `Yes — we work remotely with businesses across the ${city.state} metro area including ${city.areas.slice(0, 3).join(", ")}, and internationally. Everything is done over email, phone and a preview link.`
+          : `Yes — we work remotely with businesses across ${city.state} and internationally. Everything is done over email, phone and a preview link, so location is not a constraint.`,
       },
       {
         question: "How long will it take?",
@@ -280,7 +281,7 @@ function buildPage(service: ServiceType, city: City): LandingPage {
         answer: `Nobody can promise that, and be careful of anyone who does. For local searches, your Google Business Profile and your reviews matter more than the website. We set the profile up properly as part of the build.`,
       },
     ],
-    areaServed: [city.name, city.state, "United States"],
+    areaServed: [city.name, city.state],
     related: [service.parent],
     readMore: [
       { label: `${service.plural} website guide`, href: `/local/${service.parent}` },
@@ -295,7 +296,7 @@ function buildPage(service: ServiceType, city: City): LandingPage {
  * 40 business types x every city. Empty when the kill switch is off, which
  * removes the routes and the sitemap entries in a single deploy.
  */
-const allCities: City[] = [...cities, ...extendedCities];
+const allCities: City[] = [...cities, ...extendedCities, ...internationalCities];
 
 /** Slug for a given service + city pair. Single source of truth for the URL. */
 export function serviceAreaSlug(serviceSlug: string, citySlug: string): string {
@@ -323,3 +324,24 @@ export const citiesByState: { state: string; cities: City[] }[] = Object.values(
 export const serviceAreaPages: LandingPage[] = SERVICE_AREA_PAGES_ENABLED
   ? serviceTypes.flatMap((service) => allCities.map((city) => buildPage(service, city)))
   : [];
+
+/**
+ * Slugs prerendered at build time. Everything else in /areas renders on first
+ * request and is then cached by ISR.
+ *
+ * WHY: prerendering all of them writes roughly 470KB per page to the build
+ * output. At 113,000 pages that is ~53GB, which exhausts the disk on a Vercel
+ * build container (it failed with ENOSPC at ~11GB of output).
+ *
+ * We prerender the combinations built from the 25 cities in cities.ts, because
+ * those are the ones with real neighbourhood and industry data and therefore
+ * the strongest pages. The rest are still fully functional and still in the
+ * sitemap — they are just generated on demand.
+ */
+export const PRERENDERED_AREA_SLUGS: Set<string> = new Set(
+  SERVICE_AREA_PAGES_ENABLED
+    ? serviceTypes.flatMap((service) =>
+        cities.map((city) => serviceAreaSlug(service.slug, city.slug))
+      )
+    : []
+);
