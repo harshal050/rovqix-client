@@ -22,6 +22,7 @@ import { localBridgePages } from "@/lib/content/landing/local-bridge";
 import { localOfferPages } from "@/lib/content/landing/local-offers";
 import { localHomeTradesPages } from "@/lib/content/landing/local-home-trades";
 import { localRetailMiscPages } from "@/lib/content/landing/local-retail-misc";
+import { serviceAreaPages } from "@/lib/content/landing/service-areas";
 
 export const landingPages: LandingPage[] = [
   ...servicePages,
@@ -45,6 +46,7 @@ export const landingPages: LandingPage[] = [
   ...localOfferPages,
   ...localHomeTradesPages,
   ...localRetailMiscPages,
+  ...serviceAreaPages,
 ];
 
 const bySlug = new Map(landingPages.map((page) => [page.slug, page]));

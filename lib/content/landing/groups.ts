@@ -49,6 +49,15 @@ export const landingGroups: GroupConfig[] = [
       "Starter websites for barbers, salons, restaurants, trades and local shops — built on a proven template, live in about a week, and yours to keep. Not a custom build, and priced accordingly.",
   },
   {
+    id: "areas",
+    segment: "areas",
+    name: "Service areas",
+    hubTitle: "Service areas",
+    hubHeading: "Websites for local businesses, city by city.",
+    hubDescription:
+      "Starter websites for barbers, salons, restaurants, trades and shops across 25 US metros — from $349, live in about a week.",
+  },
+  {
     id: "cost",
     segment: "cost",
     name: "Costs",
