@@ -1,5 +1,6 @@
 import type { ArticleSection, LandingPage } from "@/lib/content/landing/types";
 import { cities, climateNotes, tierNotes, type City } from "@/lib/content/landing/cities";
+import { extendedCities } from "@/lib/content/landing/cities-extended";
 import { serviceTypes, type ServiceType } from "@/lib/content/landing/service-area-types";
 import { starterPricing, starterProof } from "@/lib/content/landing/local-shared";
 
@@ -36,7 +37,8 @@ function seedFrom(text: string): number {
 }
 
 function buildSections(service: ServiceType, city: City, seed: number): ArticleSection[] {
-  const nearby = city.areas.slice(0, 4).join(", ");
+  const hasAreas = Boolean(city.areas?.length);
+  const nearby = city.areas?.slice(0, 4).join(", ") ?? "";
   const isSeasonal = service.seasonal.includes(city.climate);
 
   const sections: ArticleSection[] = [
@@ -66,7 +68,9 @@ function buildSections(service: ServiceType, city: City, seed: number): ArticleS
         { type: "p", text: tierNotes[city.metroTier] },
         {
           type: "p",
-          text: `${city.localNote} For ${service.owners} specifically, that shapes both when enquiries arrive and what customers expect to see before they contact you.`,
+          text: city.localNote
+            ? `${city.localNote} For ${service.owners} specifically, that shapes both when enquiries arrive and what customers expect to see before they contact you.`
+            : `For ${service.owners} in ${city.name}, the practical question is whether a customer searching right now can find you, see ${service.priority}, and contact you in one tap. Most competing sites in this trade fail at least one of those.`,
         },
         {
           type: "callout",
@@ -80,15 +84,19 @@ function buildSections(service: ServiceType, city: City, seed: number): ArticleS
       body: [
         {
           type: "p",
-          text: `Customers here often search by neighbourhood rather than by city. If you cover ${nearby} or the wider ${city.name} metro, say so explicitly rather than leaving people to guess.`,
+          text: hasAreas
+            ? `Customers here often search by neighbourhood rather than by city. If you cover ${nearby} or the wider ${city.name} metro, say so explicitly rather than leaving people to guess.`
+            : `Customers often search by neighbourhood or nearby town rather than by city name. Whatever your actual coverage around ${city.name} is, name those places on your site rather than leaving people to guess.`,
         },
         {
           type: "list",
           items: [
-            `Name the specific areas you serve, such as ${city.areas.slice(0, 3).join(", ")}.`,
+            hasAreas
+              ? `Name the specific areas you serve, such as ${city.areas!.slice(0, 3).join(", ")}.`
+              : `Name the specific towns and neighbourhoods you serve around ${city.name}.`,
             "State any travel charge for the edges of your area, before someone enquires.",
             "Do not create a separate near-identical page for every suburb — it performs worse than one honest area list.",
-            `Make sure your Google Business Profile service area matches what the site says.`,
+            "Make sure your Google Business Profile service area matches what the site says.",
           ],
         },
       ],
@@ -206,7 +214,9 @@ function buildPage(service: ServiceType, city: City): LandingPage {
       `web designer for ${service.owners} ${city.stateAbbr}`,
     ],
     answer: `ROVQIX builds websites for ${service.owners} in ${city.name}, ${city.state}, starting at ${startPrice} and live in about a week. The priority for this trade is ${service.priority}, and we handle the setup so you only need to supply photos, services and hours.`,
-    intro: `${city.localNote} That affects what a ${service.noun} in ${city.name} needs from a website more than any design trend does.`,
+    intro: city.localNote
+      ? `${city.localNote} That affects what a ${service.noun} in ${city.name} needs from a website more than any design trend does.`
+      : `What a ${service.noun} in ${city.name} needs from a website is decided by how local customers actually search — on a phone, in a hurry, comparing two or three options.`,
     proof: starterProof,
     deliverables: [
       {
@@ -221,7 +231,9 @@ function buildPage(service: ServiceType, city: City): LandingPage {
       },
       {
         title: "Your service area, stated",
-        description: `${city.areas.slice(0, 4).join(", ")} and the wider metro — named, so nobody has to guess.`,
+        description: city.areas?.length
+          ? `${city.areas.slice(0, 4).join(", ")} and the wider metro — named, so nobody has to guess.`
+          : `The towns and neighbourhoods you actually cover around ${city.name}, named so nobody has to guess.`,
         icon: "Globe",
       },
       {
@@ -249,7 +261,9 @@ function buildPage(service: ServiceType, city: City): LandingPage {
       },
       {
         question: `Do you work with ${service.owners} outside ${city.name}?`,
-        answer: `Yes — we work remotely with businesses across the ${city.state} metro area including ${city.areas.slice(0, 3).join(", ")}, and across the US generally. Everything is done over email, phone and a preview link.`,
+        answer: city.areas?.length
+          ? `Yes — we work remotely with businesses across the ${city.state} metro area including ${city.areas.slice(0, 3).join(", ")}, and across the US generally. Everything is done over email, phone and a preview link.`
+          : `Yes — we work remotely with businesses across ${city.state} and the US generally. Everything is done over email, phone and a preview link, so location is not a constraint.`,
       },
       {
         question: "How long will it take?",
@@ -278,9 +292,11 @@ function buildPage(service: ServiceType, city: City): LandingPage {
 }
 
 /**
- * 40 business types x 25 metros. Empty when the kill switch is off, which
+ * 40 business types x every city. Empty when the kill switch is off, which
  * removes the routes and the sitemap entries in a single deploy.
  */
+const allCities: City[] = [...cities, ...extendedCities];
+
 export const serviceAreaPages: LandingPage[] = SERVICE_AREA_PAGES_ENABLED
-  ? serviceTypes.flatMap((service) => cities.map((city) => buildPage(service, city)))
+  ? serviceTypes.flatMap((service) => allCities.map((city) => buildPage(service, city)))
   : [];

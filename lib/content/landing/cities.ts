@@ -22,12 +22,16 @@ export type City = {
   climate: Climate;
   /** Timezone label used in the contact section. */
   timezone: string;
-  /** Real local industries — drives the "who we work with here" content. */
-  industries: string[];
-  /** Neighbourhoods and nearby towns, used for the service-area content. */
-  areas: string[];
-  /** A genuine local characteristic that affects small businesses. */
-  localNote: string;
+  /**
+   * Real local industries. OPTIONAL — only fill this in for cities where you
+   * have verified information. Do not guess; a generated page repeating an
+   * invented local fact is worse than a page that omits it.
+   */
+  industries?: string[];
+  /** Neighbourhoods and nearby towns. OPTIONAL, same rule as industries. */
+  areas?: string[];
+  /** A genuine local characteristic. OPTIONAL, same rule as industries. */
+  localNote?: string;
 };
 
 export const cities: City[] = [
