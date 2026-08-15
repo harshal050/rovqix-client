@@ -15,7 +15,8 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/api/"],
       },
     ],
-    sitemap: `${siteConfig.url}/sitemap.xml`,
+    // Points at the index, which lists every chunked sitemap file.
+    sitemap: `${siteConfig.url}/sitemap-index.xml`,
     host: siteConfig.url,
   };
 }

@@ -6,12 +6,20 @@ import { articles, getLastUpdated } from "@/lib/content/articles";
 import { clusters } from "@/lib/content/clusters";
 import { getLandingLastUpdated, landingPages, landingPath } from "@/lib/content/landing";
 import { landingGroups } from "@/lib/content/landing/groups";
+import { serviceTypes } from "@/lib/content/landing/service-area-types";
+import { SERVICE_AREA_PAGES_ENABLED } from "@/lib/content/landing/service-areas";
 
 /**
- * Every indexable URL, generated from the same sources the pages render from,
- * so publishing content adds it to the sitemap with no manual step.
+ * Sitemaps are split into chunks of 25,000 URLs. Google's hard limits are
+ * 50,000 URLs and 50MB per file; chunking well below that keeps each file fast
+ * to fetch and makes partial re-crawls cheaper.
+ *
+ * Next generates one file per id at /sitemap/{id}.xml, and /sitemap-index.xml
+ * lists them. robots.txt points at the index.
  */
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+const CHUNK_SIZE = 25000;
+
+async function allUrls(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   const staticRoutes: MetadataRoute.Sitemap = ([
@@ -51,6 +59,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  // Per-business-type city indexes that sit between /areas and the generated
+  // pages. Skipped entirely when the service-area kill switch is off.
+  const serviceAreaIndexRoutes: MetadataRoute.Sitemap = SERVICE_AREA_PAGES_ENABLED
+    ? serviceTypes.map((service) => ({
+        url: `${siteConfig.url}/areas/service/${service.slug}`,
+        lastModified: now,
+        changeFrequency: "monthly" as const,
+        priority: 0.5,
+      }))
+    : [];
+
   const topicRoutes: MetadataRoute.Sitemap = clusters.map((cluster) => ({
     url: `${siteConfig.url}/blog/topics/${cluster.slug}`,
     lastModified: now,
@@ -87,10 +106,40 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...staticRoutes,
     ...hubRoutes,
+    ...serviceAreaIndexRoutes,
     ...landingRoutes,
     ...topicRoutes,
     ...articleRoutes,
     ...projectRoutes,
     ...blogRoutes,
   ];
+}
+
+/** Number of chunk files, derived from the real URL count. */
+export async function sitemapChunkCount(): Promise<number> {
+  const urls = await allUrls();
+  return Math.max(1, Math.ceil(urls.length / CHUNK_SIZE));
+}
+
+export async function generateSitemaps(): Promise<{ id: number }[]> {
+  const count = await sitemapChunkCount();
+  return Array.from({ length: count }, (_, id) => ({ id }));
+}
+
+/**
+ * Next 16 passes `id` as a Promise resolving to a string (see
+ * next-metadata-route-loader: `handler({ id: targetIdPromise })`). Typing it as
+ * a number silently produces NaN and an empty sitemap, so resolve and coerce it
+ * explicitly.
+ */
+export default async function sitemap({
+  id,
+}: {
+  id?: Promise<string> | string | number;
+}): Promise<MetadataRoute.Sitemap> {
+  const resolved = await id;
+  const index = Number(resolved ?? 0);
+  const start = Number.isFinite(index) ? index * CHUNK_SIZE : 0;
+  const urls = await allUrls();
+  return urls.slice(start, start + CHUNK_SIZE);
 }

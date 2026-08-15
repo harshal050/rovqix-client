@@ -297,6 +297,29 @@ function buildPage(service: ServiceType, city: City): LandingPage {
  */
 const allCities: City[] = [...cities, ...extendedCities];
 
+/** Slug for a given service + city pair. Single source of truth for the URL. */
+export function serviceAreaSlug(serviceSlug: string, citySlug: string): string {
+  return `${serviceSlug}-web-design-${citySlug}`;
+}
+
+/** Every city used by the matrix, in one list. */
+export const serviceAreaCities: City[] = allCities;
+
+/** Cities grouped by state, for the directory pages. */
+export const citiesByState: { state: string; cities: City[] }[] = Object.values(
+  allCities.reduce<Record<string, { state: string; cities: City[] }>>((acc, city) => {
+    acc[city.state] ??= { state: city.state, cities: [] };
+    acc[city.state].cities.push(city);
+    return acc;
+  }, {})
+)
+  .map((group) => ({
+    state: group.state,
+    cities: [...group.cities].sort((a, b) => a.name.localeCompare(b.name)),
+  }))
+  .sort((a, b) => a.state.localeCompare(b.state));
+
+
 export const serviceAreaPages: LandingPage[] = SERVICE_AREA_PAGES_ENABLED
   ? serviceTypes.flatMap((service) => allCities.map((city) => buildPage(service, city)))
   : [];

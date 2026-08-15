@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { LandingHub } from "@/components/sections/landing/landing-hub";
+import { AreasDirectory } from "@/components/sections/landing/areas-directory";
 import { absoluteUrl, withBaseKeywords } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -19,5 +19,5 @@ export const metadata: Metadata = {
 };
 
 export default function AreasHubPage() {
-  return <LandingHub group="areas" />;
+  return <AreasDirectory />;
 }
