@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+
 import { siteConfig } from "@/lib/constants/site";
 import { getProjects } from "@/lib/api/projects";
 import { getBlogPosts } from "@/lib/api/blog";
@@ -10,31 +11,36 @@ import { serviceTypes } from "@/lib/content/landing/service-area-types";
 import { SERVICE_AREA_PAGES_ENABLED } from "@/lib/content/landing/service-areas";
 
 /**
- * Sitemaps are split into chunks of 25,000 URLs. Google's hard limits are
- * 50,000 URLs and 50MB per file; chunking well below that keeps each file fast
- * to fetch and makes partial re-crawls cheaper.
+ * Every indexable URL on the site, built from the same data the pages render
+ * from — so publishing content adds it to the sitemap with no manual step.
  *
- * Next generates one file per id at /sitemap/{id}.xml, and /sitemap-index.xml
- * lists them. robots.txt points at the index.
+ * Shared by the two sitemap routes:
+ *   /sitemap.xml      -> the sitemap index (submit this one)
+ *   /sitemaps/{n}.xml -> the chunks it points at
+ *
+ * Google allows 50,000 URLs per sitemap file. We chunk at 25,000 so each file
+ * stays small and a partial re-crawl is cheap.
  */
-const CHUNK_SIZE = 25000;
+export const SITEMAP_CHUNK_SIZE = 25000;
 
-async function allUrls(): Promise<MetadataRoute.Sitemap> {
+export async function getAllSitemapUrls(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
-  const staticRoutes: MetadataRoute.Sitemap = ([
-    { path: "", priority: 1, changeFrequency: "weekly" as const },
-    { path: "/services", priority: 0.9, changeFrequency: "monthly" as const },
-    { path: "/portfolio", priority: 0.9, changeFrequency: "monthly" as const },
-    { path: "/pricing", priority: 0.9, changeFrequency: "monthly" as const },
-    { path: "/blog", priority: 0.9, changeFrequency: "daily" as const },
-    { path: "/about", priority: 0.8, changeFrequency: "monthly" as const },
-    { path: "/process", priority: 0.7, changeFrequency: "monthly" as const },
-    { path: "/contact", priority: 0.8, changeFrequency: "monthly" as const },
-    { path: "/careers", priority: 0.5, changeFrequency: "monthly" as const },
-    { path: "/privacy", priority: 0.3, changeFrequency: "yearly" as const },
-    { path: "/terms", priority: 0.3, changeFrequency: "yearly" as const },
-  ]).map(({ path, priority, changeFrequency }) => ({
+  const staticRoutes: MetadataRoute.Sitemap = (
+    [
+      { path: "", priority: 1, changeFrequency: "weekly" as const },
+      { path: "/services", priority: 0.9, changeFrequency: "monthly" as const },
+      { path: "/portfolio", priority: 0.9, changeFrequency: "monthly" as const },
+      { path: "/pricing", priority: 0.9, changeFrequency: "monthly" as const },
+      { path: "/blog", priority: 0.9, changeFrequency: "daily" as const },
+      { path: "/about", priority: 0.8, changeFrequency: "monthly" as const },
+      { path: "/process", priority: 0.7, changeFrequency: "monthly" as const },
+      { path: "/contact", priority: 0.8, changeFrequency: "monthly" as const },
+      { path: "/careers", priority: 0.5, changeFrequency: "monthly" as const },
+      { path: "/privacy", priority: 0.3, changeFrequency: "yearly" as const },
+      { path: "/terms", priority: 0.3, changeFrequency: "yearly" as const },
+    ]
+  ).map(({ path, priority, changeFrequency }) => ({
     url: `${siteConfig.url}${path}`,
     lastModified: now,
     changeFrequency,
@@ -115,31 +121,45 @@ async function allUrls(): Promise<MetadataRoute.Sitemap> {
   ];
 }
 
-/** Number of chunk files, derived from the real URL count. */
-export async function sitemapChunkCount(): Promise<number> {
-  const urls = await allUrls();
-  return Math.max(1, Math.ceil(urls.length / CHUNK_SIZE));
+/** How many chunk files the URL list needs. */
+export async function getSitemapChunkCount(): Promise<number> {
+  const urls = await getAllSitemapUrls();
+  return Math.max(1, Math.ceil(urls.length / SITEMAP_CHUNK_SIZE));
 }
 
-export async function generateSitemaps(): Promise<{ id: number }[]> {
-  const count = await sitemapChunkCount();
-  return Array.from({ length: count }, (_, id) => ({ id }));
+/** Escapes the five XML entities. URLs here are ASCII slugs, but be safe. */
+export function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
-/**
- * Next 16 passes `id` as a Promise resolving to a string (see
- * next-metadata-route-loader: `handler({ id: targetIdPromise })`). Typing it as
- * a number silently produces NaN and an empty sitemap, so resolve and coerce it
- * explicitly.
- */
-export default async function sitemap({
-  id,
-}: {
-  id?: Promise<string> | string | number;
-}): Promise<MetadataRoute.Sitemap> {
-  const resolved = await id;
-  const index = Number(resolved ?? 0);
-  const start = Number.isFinite(index) ? index * CHUNK_SIZE : 0;
-  const urls = await allUrls();
-  return urls.slice(start, start + CHUNK_SIZE);
+function toIso(value: MetadataRoute.Sitemap[number]["lastModified"]): string {
+  if (!value) return new Date().toISOString();
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+/** Renders one <urlset> document. */
+export function renderUrlset(entries: MetadataRoute.Sitemap): string {
+  const body = entries
+    .map((entry) => {
+      const parts = [
+        `    <loc>${escapeXml(String(entry.url))}</loc>`,
+        `    <lastmod>${toIso(entry.lastModified)}</lastmod>`,
+      ];
+      if (entry.changeFrequency) parts.push(`    <changefreq>${entry.changeFrequency}</changefreq>`);
+      if (entry.priority !== undefined) parts.push(`    <priority>${entry.priority}</priority>`);
+      return `  <url>\n${parts.join("\n")}\n  </url>`;
+    })
+    .join("\n");
+
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    body,
+    "</urlset>",
+  ].join("\n");
 }

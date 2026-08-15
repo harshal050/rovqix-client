@@ -1,7 +1,7 @@
 import type { ArticleSection, LandingPage } from "@/lib/content/landing/types";
 import { cities, climateNotes, tierNotes, type City } from "@/lib/content/landing/cities";
 import { extendedCities } from "@/lib/content/landing/cities-extended";
-import { internationalCities } from "@/lib/content/landing/cities-international";
+import { englishMarkets, internationalCities } from "@/lib/content/landing/cities-international";
 import { serviceTypes, type ServiceType } from "@/lib/content/landing/service-area-types";
 import { starterPricing, starterProof } from "@/lib/content/landing/local-shared";
 
@@ -326,22 +326,74 @@ export const serviceAreaPages: LandingPage[] = SERVICE_AREA_PAGES_ENABLED
   : [];
 
 /**
- * Slugs prerendered at build time. Everything else in /areas renders on first
- * request and is then cached by ISR.
+ * ============================================================================
+ * BUILD-TIME PRERENDER BUDGET
+ * ============================================================================
+ * Prerendering every /areas page is not possible on Vercel. The arithmetic:
  *
- * WHY: prerendering all of them writes roughly 470KB per page to the build
- * output. At 113,000 pages that is ~53GB, which exhausts the disk on a Vercel
- * build container (it failed with ENOSPC at ~11GB of output).
+ *   ~470 KB of build output per page (html + rsc + meta + segments)
+ *   x 112,914 pages
+ *   = ~53 GB
  *
- * We prerender the combinations built from the 25 cities in cities.ts, because
- * those are the ones with real neighbourhood and industry data and therefore
- * the strongest pages. The rest are still fully functional and still in the
- * sitemap — they are just generated on demand.
+ * A Vercel build container has roughly 13 GB. Our first attempt died with
+ * ENOSPC after writing 11.3 GB. This is a hard physical limit, not a setting.
+ *
+ * So we prerender a priority-ordered subset and let the rest render on first
+ * request. An on-demand page is cached after that first hit and serves the
+ * exact same static HTML — a crawler cannot tell the two apart. The only
+ * difference is that the very first visitor to a cold page waits ~1-4s.
+ *
+ * TUNING: PRERENDER_CITY_LIMIT is the only number to change.
+ *
+ *   pages prerendered = serviceTypes.length (102) x PRERENDER_CITY_LIMIT
+ *   build output      = pages x ~470 KB
+ *
+ *   limit  50  ->  5,100 pages  ->  ~2.4 GB   (very safe)
+ *   limit 115  -> 11,730 pages  ->  ~5.5 GB   (current — safe headroom)
+ *   limit 150  -> 15,300 pages  ->  ~7.2 GB   (tighter)
+ *   limit 200  -> 20,400 pages  ->  ~9.6 GB   (likely to fail)
+ *
+ * If a deploy fails with ENOSPC, lower this number and redeploy.
+ * ============================================================================
+ */
+export const PRERENDER_CITY_LIMIT = 115;
+
+/**
+ * Cities ordered by how much a prerendered page is worth:
+ *   1. The cities in cities.ts — they have real neighbourhood and industry
+ *      data, so their pages are the strongest content we generate.
+ *   2. Bigger metros before smaller ones.
+ *   3. English-speaking markets before the rest, because those are the only
+ *      ones where an English page matches the actual search intent.
+ */
+const tierRank: Record<string, number> = { major: 0, large: 1, mid: 2 };
+
+const prerenderPriority: City[] = [...allCities].sort((a, b) => {
+  const richA = cities.includes(a) ? 0 : 1;
+  const richB = cities.includes(b) ? 0 : 1;
+  if (richA !== richB) return richA - richB;
+
+  const tierDiff = tierRank[a.metroTier] - tierRank[b.metroTier];
+  if (tierDiff !== 0) return tierDiff;
+
+  // stateAbbr holds a country code for international entries.
+  const engA = englishMarkets.has(a.stateAbbr) || a.stateAbbr.length === 2 ? 0 : 1;
+  const engB = englishMarkets.has(b.stateAbbr) || b.stateAbbr.length === 2 ? 0 : 1;
+  if (engA !== engB) return engA - engB;
+
+  return a.name.localeCompare(b.name);
+});
+
+/**
+ * Slugs prerendered at build time. Everything else in /areas is still a real,
+ * indexable, sitemap-listed page — it is just generated on first request.
  */
 export const PRERENDERED_AREA_SLUGS: Set<string> = new Set(
   SERVICE_AREA_PAGES_ENABLED
     ? serviceTypes.flatMap((service) =>
-        cities.map((city) => serviceAreaSlug(service.slug, city.slug))
+        prerenderPriority
+          .slice(0, PRERENDER_CITY_LIMIT)
+          .map((city) => serviceAreaSlug(service.slug, city.slug))
       )
     : []
 );
