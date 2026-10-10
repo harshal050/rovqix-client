@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/check-export-size.mjs",
     "preview": "npx --yes serve@14 out",
     "lint": "eslint",
     "deploy": "npx --yes wrangler@4 deploy"

@@ -7,6 +7,8 @@ import { articles, getLastUpdated } from "@/lib/content/articles";
 import { clusters } from "@/lib/content/clusters";
 import { getLandingLastUpdated, landingPages, landingPath } from "@/lib/content/landing";
 import { landingGroups } from "@/lib/content/landing/groups";
+import { serviceTypes } from "@/lib/content/landing/service-area-types";
+import { SERVICE_AREA_PAGES_ENABLED } from "@/lib/content/landing/service-areas";
 
 /**
  * Every indexable URL on the site, built from the same data the pages render
@@ -63,6 +65,17 @@ export async function getAllSitemapUrls(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  // Per-business-type city indexes that sit between /areas and the generated
+  // pages. Skipped entirely when the service-area kill switch is off.
+  const serviceAreaIndexRoutes: MetadataRoute.Sitemap = SERVICE_AREA_PAGES_ENABLED
+    ? serviceTypes.map((service) => ({
+        url: `${siteConfig.url}/areas/service/${service.slug}`,
+        lastModified: now,
+        changeFrequency: "monthly" as const,
+        priority: 0.5,
+      }))
+    : [];
+
   const topicRoutes: MetadataRoute.Sitemap = clusters.map((cluster) => ({
     url: `${siteConfig.url}/blog/topics/${cluster.slug}`,
     lastModified: now,
@@ -99,6 +112,7 @@ export async function getAllSitemapUrls(): Promise<MetadataRoute.Sitemap> {
   return [
     ...staticRoutes,
     ...hubRoutes,
+    ...serviceAreaIndexRoutes,
     ...landingRoutes,
     ...topicRoutes,
     ...articleRoutes,

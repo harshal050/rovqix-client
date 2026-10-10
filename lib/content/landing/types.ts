@@ -11,7 +11,9 @@ export type LandingGroup =
   | "cost"
   | "compare"
   /** Small local businesses. Template-based starter work, not custom builds. */
-  | "local";
+  | "local"
+  /** Generated business-type x metro pages. See service-areas.ts. */
+  | "areas";
 
 export type Deliverable = {
   title: string;
