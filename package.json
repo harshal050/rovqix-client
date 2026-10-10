@@ -7,7 +7,7 @@
     "build": "next build",
     "preview": "npx --yes serve@14 out",
     "lint": "eslint",
-    "deploy": "npm run build && npx --yes wrangler@4 pages deploy"
+    "deploy": "npx --yes wrangler@4 deploy"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
