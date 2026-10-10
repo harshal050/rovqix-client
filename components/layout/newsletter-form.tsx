@@ -1,44 +1,31 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getAdminApiUrl } from "@/lib/api/client";
-
-const ADMIN_API_URL = getAdminApiUrl();
+import { mailtoHref, openComposed } from "@/lib/compose";
 
 export function NewsletterForm() {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [submitted, setSubmitted] = useState(false);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!email || !ADMIN_API_URL) {
-      setStatus("error");
-      return;
-    }
+    if (!email) return;
 
-    setStatus("loading");
-    try {
-      const res = await fetch(`${ADMIN_API_URL}/api/public/newsletter`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      if (!res.ok) throw new Error("Request failed");
-      setStatus("success");
-      setEmail("");
-    } catch {
-      setStatus("error");
-    }
+    openComposed(
+      mailtoHref("Newsletter subscription", `Please add ${email} to the ROVQIX newsletter.`)
+    );
+    setSubmitted(true);
+    setEmail("");
   }
 
-  if (status === "success") {
+  if (submitted) {
     return (
       <p className="flex h-10 max-w-sm items-center gap-2 text-sm text-muted-foreground">
         <Check className="size-4 text-foreground" />
-        You&apos;re subscribed.
+        Send the email that just opened to confirm.
       </p>
     );
   }
@@ -54,13 +41,10 @@ export function NewsletterForm() {
           required
           className="h-10 rounded-full"
         />
-        <Button size="lg" className="h-10 shrink-0 rounded-full" disabled={status === "loading"}>
-          {status === "loading" ? <Loader2 className="size-4 animate-spin" /> : "Subscribe"}
+        <Button size="lg" className="h-10 shrink-0 rounded-full">
+          Subscribe
         </Button>
       </div>
-      {status === "error" && (
-        <span className="text-xs text-destructive">Something went wrong. Please try again.</span>
-      )}
     </form>
   );
 }

@@ -1,9 +1,18 @@
 import { ImageResponse } from "next/og";
-import { getBlogPostBySlug } from "@/lib/api/blog";
-import { getArticleBySlug } from "@/lib/content/articles";
+import { getBlogPosts, getBlogPostBySlug } from "@/lib/api/blog";
+import { getArticleBySlug, getArticleSlugs } from "@/lib/content/articles";
 import { getCluster } from "@/lib/content/clusters";
 import { siteConfig } from "@/lib/constants/site";
 
+export const dynamic = "force-static";
+export const dynamicParams = false;
+
+// Same slug set as the article page — one card per article.
+export async function generateStaticParams() {
+  const posts = await getBlogPosts();
+  const slugs = new Set([...getArticleSlugs(), ...posts.map((post) => post.slug)]);
+  return Array.from(slugs).map((slug) => ({ slug }));
+}
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

@@ -29,6 +29,9 @@ import {
  * articles render through the full SEO template; API posts keep the simpler
  * layout they were written for.
  */
+// Static export: only the params listed below exist.
+export const dynamicParams = false;
+
 export async function generateStaticParams() {
   const posts = await getBlogPosts();
   const slugs = new Set([...getArticleSlugs(), ...posts.map((post) => post.slug)]);

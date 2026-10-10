@@ -3,63 +3,44 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, Loader2, SendIcon, Paperclip } from "lucide-react";
+import { CheckCircle2, SendIcon } from "lucide-react";
 
 import { careerApplySchema, type CareerApplyValues } from "@/lib/schemas/careers";
 import type { CareerItem } from "@/lib/api/careers";
 import { siteConfig } from "@/lib/constants/site";
-import { getAdminApiUrl } from "@/lib/api/client";
+import { composeBody, mailtoHref, openComposed } from "@/lib/compose";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const ADMIN_API_URL = getAdminApiUrl();
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 export function ApplyForm({ jobs }: { jobs: CareerItem[] }) {
   const [submitted, setSubmitted] = useState(false);
-  const [submitError, setSubmitError] = useState(false);
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<CareerApplyValues>({
     resolver: zodResolver(careerApplySchema),
   });
 
-  async function onSubmit(values: CareerApplyValues) {
-    setSubmitError(false);
-
-    if (!ADMIN_API_URL) {
-      setSubmitError(true);
-      return;
-    }
-
-    try {
-      const resumeDataUrl = resumeFile ? await fileToDataUrl(resumeFile) : undefined;
-      const res = await fetch(`${ADMIN_API_URL}/api/public/careers/apply`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, resumeDataUrl }),
-      });
-      if (!res.ok) throw new Error("Request failed");
-      setSubmitted(true);
-      setResumeFile(null);
-      reset();
-    } catch {
-      setSubmitError(true);
-    }
+  function onSubmit(values: CareerApplyValues) {
+    const body = composeBody([
+      ["Name", values.name],
+      ["Email", values.email],
+      ["Phone", values.phone],
+      ["Position", values.position],
+      ["Why I'm a great fit", values.message],
+    ]);
+    openComposed(
+      mailtoHref(
+        `Application: ${values.position} — ${values.name}`,
+        `${body}\n\n(Please attach your resume to this email.)`
+      )
+    );
+    setSubmitted(true);
+    reset();
   }
 
   if (submitted) {
@@ -68,10 +49,10 @@ export function ApplyForm({ jobs }: { jobs: CareerItem[] }) {
         <span className="flex size-12 items-center justify-center rounded-full bg-brand-blue/15 text-brand-blue">
           <CheckCircle2 className="size-6" />
         </span>
-        <h3 className="font-heading text-xl font-medium">Application received</h3>
+        <h3 className="font-heading text-xl font-medium">Almost there</h3>
         <p className="max-w-sm text-sm text-muted-foreground">
-          Thanks for applying — we&apos;ll review your application and reach out if there&apos;s a
-          fit.
+          Your application is ready in your email app — attach your resume, hit send, and
+          we&apos;ll reach out if there&apos;s a fit.
         </p>
         <Button variant="outline" className="mt-2 rounded-full" onClick={() => setSubmitted(false)}>
           Submit another application
@@ -162,52 +143,17 @@ export function ApplyForm({ jobs }: { jobs: CareerItem[] }) {
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="resume" className="text-sm font-medium">
-          Resume{" "}
-          <span className="ml-1 text-xs font-normal text-muted-foreground">
-            (PDF or DOC, optional)
-          </span>
-        </label>
-        <label
-          htmlFor="resume"
-          className="flex h-10 w-full cursor-pointer items-center gap-2 rounded-lg border border-dashed border-input px-3 text-sm text-muted-foreground transition-colors hover:border-ring hover:text-foreground"
-        >
-          <Paperclip className="size-4 shrink-0" />
-          <span className="truncate">{resumeFile ? resumeFile.name : "Attach your resume"}</span>
-        </label>
-        <input
-          id="resume"
-          type="file"
-          accept=".pdf,.doc,.docx"
-          className="sr-only"
-          onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
-        />
-      </div>
+      <p className="text-xs text-muted-foreground">
+        Submitting opens your email app with this application addressed to{" "}
+        <a href={siteConfig.emailHref} className="underline">
+          {siteConfig.email}
+        </a>{" "}
+        — attach your resume (PDF or DOC) there before sending.
+      </p>
 
-      {submitError && (
-        <p className="text-sm text-destructive">
-          Something went wrong submitting your application. Please try again, or email your resume
-          directly to{" "}
-          <a href={siteConfig.emailHref} className="underline">
-            {siteConfig.email}
-          </a>
-          .
-        </p>
-      )}
-
-      <Button type="submit" size="lg" disabled={isSubmitting} className="mt-2 h-11 rounded-full">
-        {isSubmitting ? (
-          <>
-            <Loader2 className="size-4 animate-spin" />
-            Submitting…
-          </>
-        ) : (
-          <>
-            Submit Application
-            <SendIcon data-icon="inline-end" className="size-3.5" />
-          </>
-        )}
+      <Button type="submit" size="lg" className="mt-2 h-11 rounded-full">
+        Submit Application
+        <SendIcon data-icon="inline-end" className="size-3.5" />
       </Button>
     </form>
   );

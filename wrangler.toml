@@ -1,0 +1,6 @@
+# Cloudflare Pages project config. With Git integration, Pages reads
+# pages_build_output_dir from here; the build command is set in the dashboard
+# (npm run build).
+name = "rovqix"
+compatibility_date = "2026-10-01"
+pages_build_output_dir = "out"

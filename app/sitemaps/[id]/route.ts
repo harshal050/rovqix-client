@@ -15,6 +15,9 @@ import {
  */
 export const dynamic = "force-static";
 
+// Static export: only the params listed below exist.
+export const dynamicParams = false;
+
 export async function generateStaticParams() {
   const count = await getSitemapChunkCount();
   return Array.from({ length: count }, (_, id) => ({ id: `${id}.xml` }));

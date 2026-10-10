@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "preview": "npx --yes serve@14 out",
+    "lint": "eslint",
+    "deploy": "npm run build && npx --yes wrangler@4 pages deploy"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -65,5 +66,8 @@
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=20.9.0"
   }
 }

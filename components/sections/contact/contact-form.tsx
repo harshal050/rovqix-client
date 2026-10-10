@@ -3,17 +3,14 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, Loader2, SendIcon } from "lucide-react";
+import { CheckCircle2, MessageCircle, SendIcon } from "lucide-react";
 
 import { contactFormSchema, type ContactFormValues } from "@/lib/schemas/contact";
-import { siteConfig } from "@/lib/constants/site";
-import { getAdminApiUrl } from "@/lib/api/client";
+import { composeBody, mailtoHref, openComposed, whatsappHref } from "@/lib/compose";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-const ADMIN_API_URL = getAdminApiUrl();
 
 const fields: {
   name: keyof ContactFormValues;
@@ -29,36 +26,32 @@ const fields: {
 
 export function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
-  const [submitError, setSubmitError] = useState(false);
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
   });
 
-  async function onSubmit(values: ContactFormValues) {
-    setSubmitError(false);
-
-    if (!ADMIN_API_URL) {
-      setSubmitError(true);
-      return;
-    }
-
-    try {
-      const res = await fetch(`${ADMIN_API_URL}/api/public/contact`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      if (!res.ok) throw new Error("Request failed");
+  function send(channel: "email" | "whatsapp") {
+    return handleSubmit((values) => {
+      const body = composeBody([
+        ["Name", values.name],
+        ["Email", values.email],
+        ["Company", values.company],
+        ["Budget", values.budget],
+        ["Project details", values.message],
+      ]);
+      openComposed(
+        channel === "email"
+          ? mailtoHref(`New project enquiry from ${values.name}`, body)
+          : whatsappHref(`Hi ROVQIX, I'd like to discuss a project.\n\n${body}`)
+      );
       setSubmitted(true);
       reset();
-    } catch {
-      setSubmitError(true);
-    }
+    });
   }
 
   if (submitted) {
@@ -67,9 +60,10 @@ export function ContactForm() {
         <span className="flex size-12 items-center justify-center rounded-full bg-brand-blue/15 text-brand-blue">
           <CheckCircle2 className="size-6" />
         </span>
-        <h3 className="font-heading text-xl font-medium">Message sent</h3>
+        <h3 className="font-heading text-xl font-medium">Almost there</h3>
         <p className="max-w-sm text-sm text-muted-foreground">
-          Thanks for reaching out — we&apos;ll get back to you within one business day.
+          Your message is ready in your email app or WhatsApp — hit send there and we&apos;ll get
+          back to you within one business day.
         </p>
         <Button variant="outline" className="mt-2 rounded-full" onClick={() => setSubmitted(false)}>
           Send another message
@@ -80,7 +74,7 @@ export function ContactForm() {
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={send("email")}
       className="gradient-border glass-panel flex flex-col gap-5 rounded-2xl p-7 sm:p-9"
       noValidate
     >
@@ -122,29 +116,22 @@ export function ContactForm() {
         )}
       </div>
 
-      {submitError && (
-        <p className="text-sm text-destructive">
-          Something went wrong sending your message. Please try again, or email us directly at{" "}
-          <a href={siteConfig.emailHref} className="underline">
-            {siteConfig.email}
-          </a>
-          .
-        </p>
-      )}
-
-      <Button type="submit" size="lg" disabled={isSubmitting} className="mt-2 h-11 rounded-full">
-        {isSubmitting ? (
-          <>
-            <Loader2 className="size-4 animate-spin" />
-            Sending…
-          </>
-        ) : (
-          <>
-            Send Message
-            <SendIcon data-icon="inline-end" className="size-3.5" />
-          </>
-        )}
-      </Button>
+      <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+        <Button type="submit" size="lg" className="h-11 flex-1 rounded-full">
+          Send via Email
+          <SendIcon data-icon="inline-end" className="size-3.5" />
+        </Button>
+        <Button
+          type="button"
+          size="lg"
+          variant="outline"
+          className="h-11 flex-1 rounded-full"
+          onClick={send("whatsapp")}
+        >
+          Send on WhatsApp
+          <MessageCircle data-icon="inline-end" className="size-3.5" />
+        </Button>
+      </div>
     </form>
   );
 }

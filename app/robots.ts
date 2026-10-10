@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { siteConfig } from "@/lib/constants/site";
 
+export const dynamic = "force-static";
+
 /**
  * Everything is open, including AI retrieval crawlers — being citable in AI
  * answers is worth more to an agency than withholding the content. See

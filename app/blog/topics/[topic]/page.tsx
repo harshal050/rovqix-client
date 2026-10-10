@@ -20,6 +20,9 @@ import {
   withBaseKeywords,
 } from "@/lib/seo";
 
+// Static export: only the params listed below exist.
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return clusters.map((cluster) => ({ topic: cluster.slug }));
 }

@@ -1,13 +1,14 @@
 import type { NextConfig } from "next";
 
+/**
+ * Fully static export for Cloudflare Pages: `next build` writes plain
+ * HTML/CSS/JS to `out/`, with no server or backend at runtime.
+ */
 const nextConfig: NextConfig = {
+  output: "export",
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "res.cloudinary.com",
-      },
-    ],
+    // There is no image-optimization server on a static host.
+    unoptimized: true,
   },
 };
 

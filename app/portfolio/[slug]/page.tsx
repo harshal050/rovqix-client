@@ -14,6 +14,9 @@ import { Cta } from "@/components/sections/home/cta";
 import { JsonLd } from "@/components/shared/json-ld";
 import { breadcrumbJsonLd, withBaseKeywords } from "@/lib/seo";
 
+// Static export: only the params listed below exist.
+export const dynamicParams = false;
+
 export async function generateStaticParams() {
   const projects = await getProjects();
   return projects.map((project) => ({ slug: project.slug }));

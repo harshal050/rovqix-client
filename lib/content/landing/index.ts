@@ -22,7 +22,11 @@ import { localBridgePages } from "@/lib/content/landing/local-bridge";
 import { localOfferPages } from "@/lib/content/landing/local-offers";
 import { localHomeTradesPages } from "@/lib/content/landing/local-home-trades";
 import { localRetailMiscPages } from "@/lib/content/landing/local-retail-misc";
-import { serviceAreaPages } from "@/lib/content/landing/service-areas";
+import { localSpecialistPages } from "@/lib/content/landing/local-specialist";
+import { localRepairAutoPages } from "@/lib/content/landing/local-repair-auto";
+import { localFoodLeisurePages } from "@/lib/content/landing/local-food-leisure";
+import { localHomeFitnessPages } from "@/lib/content/landing/local-home-fitness";
+import { localFinalPages } from "@/lib/content/landing/local-final";
 
 export const landingPages: LandingPage[] = [
   ...servicePages,
@@ -46,7 +50,11 @@ export const landingPages: LandingPage[] = [
   ...localOfferPages,
   ...localHomeTradesPages,
   ...localRetailMiscPages,
-  ...serviceAreaPages,
+  ...localSpecialistPages,
+  ...localRepairAutoPages,
+  ...localFoodLeisurePages,
+  ...localHomeFitnessPages,
+  ...localFinalPages,
 ];
 
 const bySlug = new Map(landingPages.map((page) => [page.slug, page]));
