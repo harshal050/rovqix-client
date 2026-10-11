@@ -8,6 +8,7 @@
  *   node scripts/affected-sites.mjs <before-sha> <after-sha>   # changed sites
  *   node scripts/affected-sites.mjs --all                      # every site
  *   node scripts/affected-sites.mjs --all --only=rovqix,rovqix-plumber-websites
+ *   node scripts/affected-sites.mjs --all --new-only   # never-deployed sites (UNDEPLOYED_PROJECTS)
  *
  * READY_PROJECTS (JSON array, from cloudflare-setup.mjs) limits the result to
  * projects that exist on Cloudflare; the rest are reported and skipped.
@@ -60,7 +61,14 @@ if (notReady.length) {
   console.log(`::warning::Skipping ${notReady.length} site(s) with no Cloudflare project yet: ${notReady.map((p) => p.project).join(", ")}`);
 }
 
-const sites = affected.filter((p) => !notReady.includes(p)).map((p) => ({
+// --new-only: just the sites that have never been deployed (from cloudflare-setup.mjs).
+const newOnly = process.argv.includes("--new-only");
+const undeployedList = JSON.parse(process.env.UNDEPLOYED_PROJECTS || "[]");
+
+const sites = affected
+  .filter((p) => !notReady.includes(p))
+  .filter((p) => !newOnly || undeployedList.includes(p.project))
+  .map((p) => ({
   project: p.project,
   filter: p.build.match(/--filter=(\S+)/)[1],
   output: p.output,

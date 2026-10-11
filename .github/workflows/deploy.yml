@@ -2,8 +2,10 @@
 #
 # - Push to main: rebuilds only the sites whose files changed
 #   (scripts/affected-sites.mjs).
-# - Actions tab → "Deploy" → Run workflow: redeploys every site, or only the
-#   projects you list.
+# - Actions tab → "Deploy" → Run workflow, choosing what to deploy:
+#     new-only  sites never deployed yet (creates their project, domain, DNS)
+#     all       every site
+#   optionally narrowed to the projects you list.
 #
 # Needs repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
 # (see README → "Deploying with GitHub Actions").
@@ -14,6 +16,11 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
+      mode:
+        description: "What to deploy"
+        type: choice
+        options: [new-only, all]
+        default: new-only
       only:
         description: "Projects to deploy, comma-separated (e.g. rovqix,rovqix-plumber-websites). Empty = all sites."
         required: false
@@ -34,6 +41,7 @@ jobs:
     timeout-minutes: 20
     outputs:
       ready: ${{ steps.setup.outputs.ready }}
+      undeployed: ${{ steps.setup.outputs.undeployed }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -63,11 +71,15 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           ONLY: ${{ inputs.only }}
+          MODE: ${{ inputs.mode }}
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
           READY_PROJECTS: ${{ needs.setup.outputs.ready }}
+          UNDEPLOYED_PROJECTS: ${{ needs.setup.outputs.undeployed }}
         run: |
-          if [ "$EVENT" = "workflow_dispatch" ]; then
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "$MODE" = "new-only" ]; then
+            node scripts/affected-sites.mjs --all --new-only --only="$ONLY"
+          elif [ "$EVENT" = "workflow_dispatch" ]; then
             node scripts/affected-sites.mjs --all --only="$ONLY"
           else
             node scripts/affected-sites.mjs "$BEFORE" "$AFTER"

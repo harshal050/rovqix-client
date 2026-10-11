@@ -18,6 +18,8 @@
  * its first 48 hours), the rest are skipped, not failed. The projects that do
  * exist are written to $GITHUB_OUTPUT as `ready`, so the deploy still ships
  * them; re-run the workflow later to create and deploy the remainder.
+ * Projects that exist but have never been deployed are written as
+ * `undeployed`, for the workflow's "new sites only" mode.
  */
 import { appendFileSync } from "node:fs";
 
@@ -51,13 +53,16 @@ console.log(APPLY ? "Applying\n" : "Dry run\n");
 let failed = 0;
 let limitReached = false;
 const ready = [];
+const undeployed = [];
 const skipped = [];
 
 for (const p of getProjects()) {
   const steps = [];
 
   const existing = await cf("GET", `/accounts/${ACCOUNT}/pages/projects/${p.project}`);
+  let deployed = Boolean(existing.json.result?.latest_deployment);
   if (existing.status === 404) {
+    deployed = false;
     if (limitReached) {
       skipped.push(p.project);
       continue;
@@ -106,6 +111,7 @@ for (const p of getProjects()) {
   }
 
   ready.push(p.project);
+  if (!deployed) undeployed.push(p.project);
   console.log(`${steps.length ? (APPLY ? "✔" : "→") : "="} ${p.project}: ${steps.join(", ") || "already set up"}`);
 }
 
@@ -115,8 +121,13 @@ if (skipped.length) {
     `\n::warning::Cloudflare refused new projects (account project limit). ${skipped.length} site(s) not created yet and skipped this run: ${skipped.join(", ")}. New accounts are limited for their first 48 hours — re-run the Deploy workflow later.`
   );
 }
-console.log(`\n${ready.length} project(s) ready to deploy.`);
-if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `ready=${JSON.stringify(ready)}\n`);
+console.log(`\n${ready.length} project(s) ready to deploy, ${undeployed.length} never deployed.`);
+if (process.env.GITHUB_OUTPUT) {
+  appendFileSync(
+    process.env.GITHUB_OUTPUT,
+    `ready=${JSON.stringify(ready)}\nundeployed=${JSON.stringify(undeployed)}\n`
+  );
+}
 
 if (!APPLY) console.log("\nNothing changed. Re-run with --apply to create the above.");
 // Only unexpected errors fail the run; the limit is handled above.
