@@ -1,0 +1,66 @@
+/**
+ * Decides which sites a push needs to rebuild, for the GitHub Actions deploy
+ * (.github/workflows/deploy.yml). A site is affected when a changed file
+ * matches one of its watch paths from cloudflare-projects.mjs — so a blog
+ * post deploys rovqix.in only, and packages/areas/types/plumber.ts deploys
+ * plumber-websites (and rovqix.in, whose sitemap lists it).
+ *
+ *   node scripts/affected-sites.mjs <before-sha> <after-sha>   # changed sites
+ *   node scripts/affected-sites.mjs --all                      # every site
+ *   node scripts/affected-sites.mjs --all --only=rovqix,rovqix-plumber-websites
+ *
+ * Writes `sites` (a JSON matrix) and `count` to $GITHUB_OUTPUT when set.
+ */
+import { execFileSync } from "node:child_process";
+import { appendFileSync } from "node:fs";
+
+import { getProjects } from "./cloudflare-projects.mjs";
+
+const projects = getProjects();
+const [before, after] = process.argv.slice(2);
+
+function changedFiles() {
+  // First push to a branch, a force-push, or an explicit --all: deploy everything.
+  if (process.argv.includes("--all") || !before || /^0+$/.test(before)) return null;
+  try {
+    return execFileSync("git", ["diff", "--name-only", before, after ?? "HEAD"], { encoding: "utf8" })
+      .split("\n")
+      .filter(Boolean);
+  } catch {
+    return null;
+  }
+}
+
+// Same wildcard semantics as Cloudflare watch paths: `*` matches anything, `/` included.
+const toRegExp = (glob) => new RegExp(`^${glob.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`);
+
+const files = changedFiles();
+const only = (process.argv.find((arg) => arg.startsWith("--only=")) ?? "--only=")
+  .slice("--only=".length)
+  .split(",")
+  .map((name) => name.trim())
+  .filter(Boolean);
+const unknown = only.filter((name) => !projects.some((p) => p.project === name));
+if (unknown.length) {
+  console.error(`Unknown project(s): ${unknown.join(", ")}. See npm run cf:projects.`);
+  process.exit(1);
+}
+
+const affected = (files
+  ? projects.filter((p) => p.include.map(toRegExp).some((re) => files.some((file) => re.test(file))))
+  : projects
+).filter((p) => !only.length || only.includes(p.project));
+
+const sites = affected.map((p) => ({
+  project: p.project,
+  filter: p.build.match(/--filter=(\S+)/)[1],
+  output: p.output,
+}));
+
+console.log(
+  `${files ? `${files.length} changed files` : "Full deploy"} → ${sites.length} site(s): ${sites.map((s) => s.project).join(", ") || "none"}`
+);
+
+if (process.env.GITHUB_OUTPUT) {
+  appendFileSync(process.env.GITHUB_OUTPUT, `sites=${JSON.stringify(sites)}\ncount=${sites.length}\n`);
+}

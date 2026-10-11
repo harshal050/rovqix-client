@@ -1,0 +1,105 @@
+# Builds the sites on GitHub and uploads them to Cloudflare Pages.
+#
+# - Push to main: rebuilds only the sites whose files changed
+#   (scripts/affected-sites.mjs).
+# - Actions tab → "Deploy" → Run workflow: redeploys every site, or only the
+#   projects you list.
+#
+# Needs repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
+# (see README → "Deploying with GitHub Actions").
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Projects to deploy, comma-separated (e.g. rovqix,rovqix-plumber-websites). Empty = all sites."
+        required: false
+        default: ""
+
+# One deploy at a time; a newer push waits rather than cancelling uploads.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    name: Cloudflare projects & domains
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - run: node scripts/cloudflare-setup.mjs --apply
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  plan:
+    name: Find changed sites
+    runs-on: ubuntu-latest
+    outputs:
+      sites: ${{ steps.plan.outputs.sites }}
+      count: ${{ steps.plan.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          ONLY: ${{ inputs.only }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            node scripts/affected-sites.mjs --all --only="$ONLY"
+          else
+            node scripts/affected-sites.mjs "$BEFORE" "$AFTER"
+          fi
+
+  deploy:
+    name: ${{ matrix.site.project }}
+    needs: [setup, plan]
+    if: needs.plan.outputs.count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        site: ${{ fromJSON(needs.plan.outputs.sites) }}
+    steps:
+      # A trade site needs ~15 GB while building; the runner image ships with
+      # tools this build never uses.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h /
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - name: Build
+        run: npx turbo run build --filter="$FILTER"
+        env:
+          FILTER: ${{ matrix.site.filter }}
+      - name: Upload to Cloudflare Pages
+        run: npx --yes wrangler@4.141.0 pages deploy "$OUTPUT" --project-name="$PROJECT" --branch=main --commit-dirty=true
+        env:
+          OUTPUT: ${{ matrix.site.output }}
+          PROJECT: ${{ matrix.site.project }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

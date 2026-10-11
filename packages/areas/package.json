@@ -1,0 +1,28 @@
+{
+  "name": "@rovqix/areas",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Area-page generator (business type x city) and the registry of area subdomains.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "validate": "npx --yes tsx@4.19.2 validate.ts"
+  },
+  "dependencies": {
+    "@rovqix/shared": "*"
+  },
+  "devDependencies": {
+    "@rovqix/typescript-config": "*",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.10",
+    "typescript": "^5",
+    "next": "16.2.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  }
+}

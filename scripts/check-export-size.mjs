@@ -1,15 +1,16 @@
 /**
- * Runs after `next build` (npm "postbuild"). Cloudflare rejects a deployment
- * with more than 20,000 files or any file over 25 MiB, so fail here with a
- * clear message instead of at upload time.
+ * Runs after every app's `next build` (npm "postbuild"), with the export
+ * directory as its argument. Cloudflare Pages rejects a deployment with more
+ * than 20,000 files or any file over 25 MiB, so fail here with a clear message
+ * instead of at upload time.
  *
- * Over the file limit? Lower AREA_CITY_LIMIT in
- * lib/content/landing/service-areas.ts (each step removes ~920 files).
+ * An area subdomain over the limit has too many business types: move some to
+ * another shard in packages/areas/shards/ (each type is ~1,100 files).
  */
 import { readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
-const OUT_DIR = "out";
+const OUT_DIR = resolve(process.argv[2] ?? "out");
 const MAX_FILES = 20000;
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 
@@ -36,6 +37,8 @@ if (oversized.length) {
   console.error(`✘ Files over 25 MiB:\n  ${oversized.join("\n  ")}`);
 }
 if (files > MAX_FILES) {
-  console.error("✘ Too many files for Cloudflare. Lower AREA_CITY_LIMIT in lib/content/landing/service-areas.ts.");
+  console.error(
+    "✘ Too many files for one Cloudflare Pages site. For an area subdomain, move business types to another shard in packages/areas/shards/."
+  );
 }
 if (oversized.length || files > MAX_FILES) process.exit(1);
