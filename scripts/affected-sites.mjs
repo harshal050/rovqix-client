@@ -9,6 +9,9 @@
  *   node scripts/affected-sites.mjs --all                      # every site
  *   node scripts/affected-sites.mjs --all --only=rovqix,rovqix-plumber-websites
  *
+ * READY_PROJECTS (JSON array, from cloudflare-setup.mjs) limits the result to
+ * projects that exist on Cloudflare; the rest are reported and skipped.
+ *
  * Writes `sites` (a JSON matrix) and `count` to $GITHUB_OUTPUT when set.
  */
 import { execFileSync } from "node:child_process";
@@ -51,7 +54,13 @@ const affected = (files
   : projects
 ).filter((p) => !only.length || only.includes(p.project));
 
-const sites = affected.map((p) => ({
+const readyList = process.env.READY_PROJECTS ? JSON.parse(process.env.READY_PROJECTS) : null;
+const notReady = readyList ? affected.filter((p) => !readyList.includes(p.project)) : [];
+if (notReady.length) {
+  console.log(`::warning::Skipping ${notReady.length} site(s) with no Cloudflare project yet: ${notReady.map((p) => p.project).join(", ")}`);
+}
+
+const sites = affected.filter((p) => !notReady.includes(p)).map((p) => ({
   project: p.project,
   filter: p.build.match(/--filter=(\S+)/)[1],
   output: p.output,

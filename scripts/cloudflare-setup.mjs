@@ -13,8 +13,18 @@
  *
  * Token permissions: Account › Cloudflare Pages › Edit,
  * Zone › DNS › Edit and Zone › Zone › Read (zone rovqix.in).
+ *
+ * If Cloudflare refuses new projects (a new account may create only ~20 in
+ * its first 48 hours), the rest are skipped, not failed. The projects that do
+ * exist are written to $GITHUB_OUTPUT as `ready`, so the deploy still ships
+ * them; re-run the workflow later to create and deploy the remainder.
  */
+import { appendFileSync } from "node:fs";
+
 import { getProjects, ROOT_DOMAIN } from "./cloudflare-projects.mjs";
+
+/** Cloudflare's "reached the limit of projects" error. */
+const PROJECT_LIMIT_ERROR = 8000027;
 
 const APPLY = process.argv.includes("--apply");
 const { CLOUDFLARE_API_TOKEN: TOKEN, CLOUDFLARE_ACCOUNT_ID: ACCOUNT } = process.env;
@@ -39,12 +49,19 @@ if (!zoneId) console.warn(`! Zone ${ROOT_DOMAIN} not found with this token; DNS 
 
 console.log(APPLY ? "Applying\n" : "Dry run\n");
 let failed = 0;
+let limitReached = false;
+const ready = [];
+const skipped = [];
 
 for (const p of getProjects()) {
   const steps = [];
 
   const existing = await cf("GET", `/accounts/${ACCOUNT}/pages/projects/${p.project}`);
   if (existing.status === 404) {
+    if (limitReached) {
+      skipped.push(p.project);
+      continue;
+    }
     steps.push("create project");
     if (APPLY) {
       const created = await cf("POST", `/accounts/${ACCOUNT}/pages/projects`, {
@@ -52,6 +69,11 @@ for (const p of getProjects()) {
         production_branch: "main",
       });
       if (!created.ok) {
+        if (created.json.errors?.some((e) => e.code === PROJECT_LIMIT_ERROR)) {
+          limitReached = true;
+          skipped.push(p.project);
+          continue;
+        }
         console.error(`✘ ${p.project}: ${JSON.stringify(created.json.errors ?? created.json)}`);
         failed += 1;
         continue;
@@ -83,8 +105,19 @@ for (const p of getProjects()) {
     }
   }
 
+  ready.push(p.project);
   console.log(`${steps.length ? (APPLY ? "✔" : "→") : "="} ${p.project}: ${steps.join(", ") || "already set up"}`);
 }
 
+if (skipped.length) {
+  // ::warning:: shows as an annotation on the GitHub Actions run.
+  console.log(
+    `\n::warning::Cloudflare refused new projects (account project limit). ${skipped.length} site(s) not created yet and skipped this run: ${skipped.join(", ")}. New accounts are limited for their first 48 hours — re-run the Deploy workflow later.`
+  );
+}
+console.log(`\n${ready.length} project(s) ready to deploy.`);
+if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `ready=${JSON.stringify(ready)}\n`);
+
 if (!APPLY) console.log("\nNothing changed. Re-run with --apply to create the above.");
-if (failed) process.exit(1);
+// Only unexpected errors fail the run; the limit is handled above.
+if (failed && !ready.length) process.exit(1);
