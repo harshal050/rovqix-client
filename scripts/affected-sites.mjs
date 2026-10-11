@@ -10,8 +10,8 @@
  *   node scripts/affected-sites.mjs --all --only=rovqix,rovqix-plumber-websites
  *   node scripts/affected-sites.mjs --all --new-only   # never-deployed sites (UNDEPLOYED_PROJECTS)
  *
- * READY_PROJECTS (JSON array, from cloudflare-setup.mjs) limits the result to
- * projects that exist on Cloudflare; the rest are reported and skipped.
+ * HOSTING_MAP (JSON {project: "pages" | "worker"}, from cloudflare-setup.mjs)
+ * tells the deploy how to upload each site; sites missing from it are skipped.
  *
  * Writes `sites` (a JSON matrix) and `count` to $GITHUB_OUTPUT when set.
  */
@@ -55,10 +55,10 @@ const affected = (files
   : projects
 ).filter((p) => !only.length || only.includes(p.project));
 
-const readyList = process.env.READY_PROJECTS ? JSON.parse(process.env.READY_PROJECTS) : null;
-const notReady = readyList ? affected.filter((p) => !readyList.includes(p.project)) : [];
+const hostingMap = process.env.HOSTING_MAP ? JSON.parse(process.env.HOSTING_MAP) : null;
+const notReady = hostingMap ? affected.filter((p) => !hostingMap[p.project]) : [];
 if (notReady.length) {
-  console.log(`::warning::Skipping ${notReady.length} site(s) with no Cloudflare project yet: ${notReady.map((p) => p.project).join(", ")}`);
+  console.log(`::warning::Skipping ${notReady.length} site(s) Cloudflare setup failed for: ${notReady.map((p) => p.project).join(", ")}`);
 }
 
 // --new-only: just the sites that have never been deployed (from cloudflare-setup.mjs).
@@ -70,6 +70,8 @@ const sites = affected
   .filter((p) => !newOnly || undeployedList.includes(p.project))
   .map((p) => ({
   project: p.project,
+  hosting: hostingMap?.[p.project] ?? "pages",
+  domain: p.domain,
   filter: p.build.match(/--filter=(\S+)/)[1],
   output: p.output,
 }));

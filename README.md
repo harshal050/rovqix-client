@@ -47,18 +47,26 @@ Requires Node 22 (see `.node-version`).
 
 ## Deploying with GitHub Actions
 
-GitHub builds every site and uploads it to Cloudflare Pages (`.github/workflows/deploy.yml`). Nothing is built on your machine or by Cloudflare. Cloudflare has 100 projects: `rovqix` (rovqix.in) plus `rovqix-<trade>-websites` for the 99 trade sites, all Direct Upload.
+GitHub builds every site and uploads it to Cloudflare (`.github/workflows/deploy.yml`). Nothing is built on your machine or by Cloudflare. Each site is `rovqix` (rovqix.in) or `rovqix-<trade>-websites`, hosted one of two ways:
+
+- **Cloudflare Pages:** rovqix.in, and trade sites that already have a Pages project.
+- **Asset-only Workers:** every other trade site. Cloudflare serves the same static files, with no code or backend. The account refuses Pages projects after 20 (error 8000027), but allows 100 Workers.
+
+`scripts/cloudflare-setup.mjs` picks the hosting on every run, and the URLs are the same either way.
 
 ### One-time setup
 
 1. **Cloudflare API token:** dash.cloudflare.com → My Profile → API Tokens → Create Token → *Create Custom Token*, with these permissions:
    - Account › **Cloudflare Pages** › Edit
-   - Zone › **DNS** › Edit, and Zone › **Zone** › Read. Under *Zone Resources*, choose Include › Specific zone › rovqix.in.
+   - Account › **Workers Scripts** › Edit
+   - Zone › **Workers Routes** › Edit, Zone › **DNS** › Edit, and Zone › **Zone** › Read. Under *Zone Resources*, choose Include › Specific zone › rovqix.in.
 2. **Account ID:** in the Cloudflare dashboard, click rovqix.in; it's on the right under *API → Account ID*.
 3. **GitHub secrets:** in the repo, go to Settings → Secrets and variables → Actions → New repository secret:
    - `CLOUDFLARE_API_TOKEN` = the token
    - `CLOUDFLARE_ACCOUNT_ID` = the account ID
-4. **Deploy everything:** go to the Actions tab → **Deploy** → *Run workflow* (leave "Projects" empty). The first run creates all 100 Cloudflare projects, their domains and DNS records, then builds and uploads every site, 20 at a time, in about 1–1.5 hours.
+4. **Deploy:** go to the Actions tab → **Deploy** → *Run workflow*:
+   - **new-only** (default): only sites never deployed. It creates their Pages domain or Worker, plus the DNS record.
+   - **all**: every site, 20 at a time, in about 1–1.5 hours.
 
 ### After that
 
@@ -69,7 +77,7 @@ GitHub builds every site and uploads it to Cloudflare Pages (`.github/workflows/
 ### Limits
 
 - **GitHub Actions minutes:** a full deploy uses about 1,200–1,400 minutes. Public repos have no minute limit on standard runners. Private repos on GitHub Free get 2,000 minutes a month, so about one full deploy plus smaller ones. Up to 20 jobs run at once.
-- **Cloudflare:** 100 projects per account, all used. Each site has at most 20,000 files; the largest trade site has about 15,550. Direct Upload doesn't count against Cloudflare's 500 builds a month.
+- **Cloudflare:** Pages refuses new projects after 20 on this account; Workers allow 100 per account. Each site has at most 20,000 files (the largest trade site has about 15,550). Uploads from GitHub don't count against Cloudflare's 500 builds a month.
 - **Disk:** a trade site needs about 15 GB while building. The workflow deletes unused preinstalled tools from the runner first to make room.
 
 ## Search Console

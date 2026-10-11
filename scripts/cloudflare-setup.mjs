@@ -1,32 +1,31 @@
 /**
- * Makes sure every site has a Cloudflare Pages project, its custom domain and
- * its DNS record: rovqix.in plus one project per trade site. Safe to re-run:
- * anything that already exists is left alone.
+ * Decides where each site is hosted and prepares Cloudflare for it. Run by the
+ * GitHub Actions deploy (.github/workflows/deploy.yml) before every deploy.
+ * Safe to re-run: anything that already exists is left alone.
  *
- * The GitHub Actions deploy (.github/workflows/deploy.yml) runs this before
- * every deploy. Projects are "Direct Upload": GitHub builds the sites and
- * uploads them; Cloudflare does no building, so its 500-builds-a-month limit
- * does not apply.
+ * Hosting:
+ *   pages   rovqix.in, and any trade site that already has a Pages project.
+ *           This script creates the main project if missing, plus the custom
+ *           domain and DNS record for every Pages site.
+ *   worker  every other trade site: an asset-only Worker (static files, no
+ *           code). The account allows few Pages projects (error 8000027
+ *           after 20), but 100 Workers. `wrangler deploy` in the workflow
+ *           creates the Worker, its custom domain and DNS record.
+ *
+ * Writes to $GITHUB_OUTPUT:
+ *   hosting     {"<project>": "pages" | "worker"} for every site
+ *   undeployed  projects that have never been deployed (for "new-only" runs)
  *
  *   CLOUDFLARE_API_TOKEN=…  CLOUDFLARE_ACCOUNT_ID=…  npm run cf:setup            # dry run
  *   CLOUDFLARE_API_TOKEN=…  CLOUDFLARE_ACCOUNT_ID=…  npm run cf:setup -- --apply
  *
- * Token permissions: Account › Cloudflare Pages › Edit,
- * Zone › DNS › Edit and Zone › Zone › Read (zone rovqix.in).
- *
- * If Cloudflare refuses new projects (a new account may create only ~20 in
- * its first 48 hours), the rest are skipped, not failed. The projects that do
- * exist are written to $GITHUB_OUTPUT as `ready`, so the deploy still ships
- * them; re-run the workflow later to create and deploy the remainder.
- * Projects that exist but have never been deployed are written as
- * `undeployed`, for the workflow's "new sites only" mode.
+ * Token permissions: Account › Cloudflare Pages › Edit, Account › Workers
+ * Scripts › Edit, Zone › Workers Routes › Edit, Zone › DNS › Edit and
+ * Zone › Zone › Read (zone rovqix.in).
  */
 import { appendFileSync } from "node:fs";
 
 import { getProjects, ROOT_DOMAIN } from "./cloudflare-projects.mjs";
-
-/** Cloudflare's "reached the limit of projects" error. */
-const PROJECT_LIMIT_ERROR = 8000027;
 
 const APPLY = process.argv.includes("--apply");
 const { CLOUDFLARE_API_TOKEN: TOKEN, CLOUDFLARE_ACCOUNT_ID: ACCOUNT } = process.env;
@@ -47,88 +46,76 @@ async function cf(method, path, body) {
 
 const zones = await cf("GET", `/zones?name=${ROOT_DOMAIN}`);
 const zoneId = zones.json.result?.[0]?.id;
-if (!zoneId) console.warn(`! Zone ${ROOT_DOMAIN} not found with this token; DNS records will be skipped.`);
+if (!zoneId) console.warn(`! Zone ${ROOT_DOMAIN} not found with this token; Pages DNS records will be skipped.`);
 
 console.log(APPLY ? "Applying\n" : "Dry run\n");
-let failed = 0;
-let limitReached = false;
-const ready = [];
+const hosting = {};
 const undeployed = [];
-const skipped = [];
+let failed = 0;
 
-for (const p of getProjects()) {
-  const steps = [];
-
-  const existing = await cf("GET", `/accounts/${ACCOUNT}/pages/projects/${p.project}`);
-  let deployed = Boolean(existing.json.result?.latest_deployment);
-  if (existing.status === 404) {
-    deployed = false;
-    if (limitReached) {
-      skipped.push(p.project);
-      continue;
-    }
-    steps.push("create project");
-    if (APPLY) {
-      const created = await cf("POST", `/accounts/${ACCOUNT}/pages/projects`, {
-        name: p.project,
-        production_branch: "main",
-      });
-      if (!created.ok) {
-        if (created.json.errors?.some((e) => e.code === PROJECT_LIMIT_ERROR)) {
-          limitReached = true;
-          skipped.push(p.project);
-          continue;
-        }
-        console.error(`✘ ${p.project}: ${JSON.stringify(created.json.errors ?? created.json)}`);
-        failed += 1;
-        continue;
-      }
-    }
-  } else if (!existing.ok) {
-    console.error(`✘ ${p.project}: ${JSON.stringify(existing.json.errors ?? existing.json)}`);
-    failed += 1;
-    continue;
-  }
-
+/** Custom domain + DNS record for a Pages site. */
+async function ensurePagesDomain(p, steps) {
   const domains = await cf("GET", `/accounts/${ACCOUNT}/pages/projects/${p.project}/domains`);
   if (!domains.json.result?.some((d) => d.name === p.domain)) {
     steps.push(`add domain ${p.domain}`);
     if (APPLY) await cf("POST", `/accounts/${ACCOUNT}/pages/projects/${p.project}/domains`, { name: p.domain });
   }
+  if (!zoneId) return;
+  const records = await cf("GET", `/zones/${zoneId}/dns_records?name=${p.domain}`);
+  if (!records.json.result?.length) {
+    steps.push(`DNS CNAME → ${p.project}.pages.dev`);
+    if (APPLY)
+      await cf("POST", `/zones/${zoneId}/dns_records`, {
+        type: "CNAME",
+        name: p.domain,
+        content: `${p.project}.pages.dev`,
+        proxied: true,
+      });
+  }
+}
 
-  if (zoneId) {
-    const records = await cf("GET", `/zones/${zoneId}/dns_records?name=${p.domain}`);
-    if (!records.json.result?.length) {
-      steps.push(`DNS CNAME → ${p.project}.pages.dev`);
-      if (APPLY)
-        await cf("POST", `/zones/${zoneId}/dns_records`, {
-          type: "CNAME",
-          name: p.domain,
-          content: `${p.project}.pages.dev`,
-          proxied: true,
-        });
+for (const p of getProjects()) {
+  const steps = [];
+  const pages = await cf("GET", `/accounts/${ACCOUNT}/pages/projects/${p.project}`);
+
+  if (pages.ok || p.main) {
+    // Pages: an existing project, or the main site (created if missing).
+    let deployed = Boolean(pages.json.result?.latest_deployment);
+    if (!pages.ok) {
+      deployed = false;
+      steps.push("create Pages project");
+      if (APPLY) {
+        const created = await cf("POST", `/accounts/${ACCOUNT}/pages/projects`, { name: p.project, production_branch: "main" });
+        if (!created.ok) {
+          console.error(`✘ ${p.project}: ${JSON.stringify(created.json.errors ?? created.json)}`);
+          failed += 1;
+          continue;
+        }
+      }
     }
+    await ensurePagesDomain(p, steps);
+    hosting[p.project] = "pages";
+    if (!deployed) undeployed.push(p.project);
+  } else {
+    // Worker: wrangler creates the script, custom domain and DNS on deploy.
+    const script = await cf("GET", `/accounts/${ACCOUNT}/workers/scripts/${p.project}/settings`);
+    if (!script.ok) {
+      steps.push("new Worker (created on deploy)");
+      undeployed.push(p.project);
+    }
+    hosting[p.project] = "worker";
   }
 
-  ready.push(p.project);
-  if (!deployed) undeployed.push(p.project);
-  console.log(`${steps.length ? (APPLY ? "✔" : "→") : "="} ${p.project}: ${steps.join(", ") || "already set up"}`);
+  console.log(`${steps.length ? (APPLY ? "✔" : "→") : "="} ${p.project} [${hosting[p.project]}]: ${steps.join(", ") || "ready"}`);
 }
 
-if (skipped.length) {
-  // ::warning:: shows as an annotation on the GitHub Actions run.
-  console.log(
-    `\n::warning::Cloudflare refused new projects (account project limit). ${skipped.length} site(s) not created yet and skipped this run: ${skipped.join(", ")}. New accounts are limited for their first 48 hours — re-run the Deploy workflow later.`
-  );
-}
-console.log(`\n${ready.length} project(s) ready to deploy, ${undeployed.length} never deployed.`);
+const counts = Object.values(hosting).reduce((acc, h) => ({ ...acc, [h]: (acc[h] ?? 0) + 1 }), {});
+console.log(`\n${counts.pages ?? 0} on Pages, ${counts.worker ?? 0} as Workers, ${undeployed.length} never deployed.`);
 if (process.env.GITHUB_OUTPUT) {
   appendFileSync(
     process.env.GITHUB_OUTPUT,
-    `ready=${JSON.stringify(ready)}\nundeployed=${JSON.stringify(undeployed)}\n`
+    `hosting=${JSON.stringify(hosting)}\nundeployed=${JSON.stringify(undeployed)}\n`
   );
 }
-
 if (!APPLY) console.log("\nNothing changed. Re-run with --apply to create the above.");
-// Only unexpected errors fail the run; the limit is handled above.
-if (failed && !ready.length) process.exit(1);
+if (failed) process.exit(1);
