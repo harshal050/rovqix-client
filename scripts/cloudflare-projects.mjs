@@ -15,8 +15,16 @@ import { fileURLToPath } from "node:url";
 
 export const ROOT_DOMAIN = "rovqix.in";
 
-// Files every build depends on: workspace manifests, lockfile, turbo, tooling.
-const ROOT_FILES = ["package.json", "package-lock.json", "turbo.json", ".node-version", "scripts/check-export-size.mjs"];
+// Files every site depends on: workspace manifests, lockfile, turbo, build
+// tooling and the deploy pipeline itself (a pipeline change redeploys all).
+const ROOT_FILES = [
+  "package.json",
+  "package-lock.json",
+  "turbo.json",
+  ".node-version",
+  "scripts/*",
+  ".github/workflows/deploy.yml",
+];
 
 export function getProjects() {
   const apps = readdirSync("apps")
